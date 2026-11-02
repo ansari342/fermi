@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Fermi — Physics, Compiled</title>
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#000000" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * {
@@ -50,6 +55,23 @@
       justify-content: space-between;
       padding: calc(20px + var(--safe-top)) calc(32px + var(--safe-right)) 20px calc(32px + var(--safe-left));
       pointer-events: none;
+    }
+
+    #brand-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand-logo {
+      display: block;
+      width: 26px;
+      height: 26px;
+      opacity: 0.92;
+      transition: opacity 0.2s ease;
+    }
+    #brand-link:hover .brand-logo {
+      opacity: 1;
     }
 
     #hud-0, #hud-1, #hud-2, #hud-3 {
@@ -212,7 +234,7 @@
   <!-- MINIMAL FLOATING TOP BAR: FERMI BRAND MARK -->
   <header class="fixed top-0 inset-x-0 z-50 flex items-center justify-between pointer-events-none">
     <a href="#sec-0" id="brand-link" class="pointer-events-auto flex items-center gap-2.5 group">
-      <span class="w-2 h-2 rounded-full bg-[#FF5526] shadow-[0_0_12px_#FF5526]"></span>
+      <img src="assets/logo.png" alt="" width="26" height="26" class="brand-logo" />
       <span class="font-mono text-xs font-semibold tracking-[0.22em] uppercase text-white/90 group-hover:text-white transition-colors">Fermi</span>
     </a>
   </header>
