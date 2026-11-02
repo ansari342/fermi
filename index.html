@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fermi — Physics, Compiled</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background-color: #000000;
+      color: #F5F7FA;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: #000000;
+      color: #F5F7FA;
+      overflow-x: hidden;
+      min-height: 400vh;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Fallback native CSS layout rules so layout never depends on external CDN scripts */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      pointer-events: none;
+    }
+
+    #hud-0, #hud-1, #hud-2, #hud-3 {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 28px 24px 44px 24px;
+    }
+
+    #sticky-cta-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 108px;
+      z-index: 45;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    #sec-0, #sec-1, #sec-2, #sec-3 {
+      width: 100%;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Mock 2 (No Badge): Lower-Center Specular Ghost Capsule */
+    #schedule-call-btn {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.28),
+        0 8px 24px rgba(0, 0, 0, 0.6);
+      color: rgba(255, 255, 255, 0.94);
+      border-radius: 9999px;
+      padding: 9px 22px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.22s ease;
+    }
+    #schedule-call-btn:hover {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 100%);
+      border-color: rgba(255, 255, 255, 0.72);
+      color: #FFFFFF;
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.42),
+        0 10px 28px rgba(0, 0, 0, 0.75),
+        0 0 20px rgba(255, 255, 255, 0.10);
+    }
+
+    /* Full-Screen Fixed 3D WebGL Raymarch Canvas */
+    #webgl-stage {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Full-Screen Fixed 2D Vorticity Vector Arrows & Advection Streamlines Overlay */
+    #vorticity-stage {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 2;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Minimal Floating Glass HUD */
+    .glass-hud {
+      background: rgba(10, 11, 14, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .hud-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hud-pill:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+    .hud-pill.active {
+      background: #F5F7FA;
+      color: #050507;
+      border-color: #F5F7FA;
+      font-weight: 600;
+    }
+
+    @keyframes pulse-line {
+      0%, 100% { opacity: 0.22; transform: scaleY(0.85); }
+      50% { opacity: 0.75; transform: scaleY(1.08); }
+    }
+    .scroll-line {
+      animation: pulse-line 2.4s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-[#FF5526] selection:text-white">
+
+  <!-- 1. UNIFIED FULL-SCREEN 3D RAYMARCHED PHYSICS CANVAS -->
+  <canvas id="webgl-stage"></canvas>
+
+  <!-- 2. FULL-SCREEN VORTICITY VECTOR ARROWS & STREAMLINE OVERLAY (STAGE 02) -->
+  <canvas id="vorticity-stage"></canvas>
+
+  <!-- MINIMAL FLOATING TOP BAR: FERMI BRAND MARK -->
+  <header class="fixed top-0 inset-x-0 z-50 px-6 sm:px-10 py-5 flex items-center justify-between pointer-events-none">
+    <a href="#sec-0" id="brand-link" class="pointer-events-auto flex items-center gap-2.5 group">
+      <span class="w-2 h-2 rounded-full bg-[#FF5526] shadow-[0_0_12px_#FF5526]"></span>
+      <span class="font-mono text-xs font-semibold tracking-[0.22em] uppercase text-white/90 group-hover:text-white transition-colors">Fermi</span>
+    </a>
+  </header>
+
+  <!-- STICKY LOWER-CENTER SEE-THROUGH SPECULAR GHOST CAPSULE CTA (MOCK 2, NO BADGE) -->
+  <div id="sticky-cta-dock">
+    <button id="schedule-call-btn" class="pointer-events-auto">
+      Schedule call
+    </button>
+  </div>
+
+  <!-- STICKY SCHEDULE CALL MODAL -->
+  <div id="schedule-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-6 bg-black/75 backdrop-blur-md">
+    <div class="glass-hud max-w-md w-full rounded-3xl p-7 border border-white/15 shadow-2xl space-y-5 relative pointer-events-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-[#FF5526]"></span>
+          <span class="font-mono text-xs uppercase tracking-widest text-white/80">FERMI ENGINEERING</span>
+        </div>
+        <button id="close-modal-btn" class="text-white/40 hover:text-white text-xs font-mono cursor-pointer px-2 py-1">ESC ✕</button>
+      </div>
+      <div class="space-y-1.5">
+        <h3 class="text-lg font-semibold text-white tracking-tight">Schedule a Fermi Architecture Call</h3>
+        <p class="text-xs text-white/55 leading-relaxed">
+          30-minute live walkthrough of the model-agnostic 3D SDF & Navier–Stokes trajectory verifier over Veo, Kling, Runway, or custom DiT backbones.
+        </p>
+      </div>
+      <form id="schedule-form" class="space-y-3">
+        <input type="email" required placeholder="work@company.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/12 text-xs text-white placeholder-white/35 focus:outline-none focus:border-[#FF5526]" />
+        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+          <button type="button" class="slot-btn hud-pill active py-2 rounded-xl cursor-pointer">Tue · 10:30 AM PT</button>
+          <button type="button" class="slot-btn hud-pill py-2 rounded-xl cursor-pointer">Thu · 2:00 PM PT</button>
+        </div>
+        <button type="submit" id="schedule-submit-btn" class="w-full py-2.5 rounded-full bg-[#FF5526] text-white text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#ff663d] transition-colors cursor-pointer">
+          Confirm Call Invite
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- FIXED HUD OVERLAYS: BRIEF SMALL-TEXT PHYSICS DESCRIPTIONS ONLY        -->
+  <!-- ===================================================================== -->
+  <div id="hud-0" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6">
+    <div id="hero-caption" class="flex flex-col items-center text-center transition-opacity duration-200 max-w-md">
+      <p class="text-xs text-white/45 leading-relaxed font-normal">
+        <span class="text-white/70 font-mono text-[11px]">Rigid-body lattice equilibrium (∑F = 0)</span> · Micro-faceted graphite seed with anisotropic surface dents prior to thermal phase transition.
+      </p>
+    </div>
+
+    <button id="scroll-prompt" class="fixed bottom-2.5 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1 text-[10px] font-mono tracking-[0.2em] text-white/35 hover:text-white transition-opacity duration-200 cursor-pointer bg-transparent border-0">
+      <span>SCROLL</span>
+      <div class="w-px h-4 bg-white/30 scroll-line"></div>
+    </button>
+  </div>
+
+  <!-- CHAPTER 01 FIXED CAPTION: LIQUID CHROME & SURFACE TENSION -->
+  <div id="hud-1" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
+    <p class="text-xs text-white/55 max-w-lg mx-auto text-center leading-relaxed font-normal">
+      <span class="text-white/85 font-mono text-[11px]">Young–Laplace capillarity (Δp = γ∇·n̂)</span> · Cohesive 3D smooth-SDF liquid metal bodies minimize surface area across high-curvature meniscus bridges while conserving total volume.
+    </p>
+  </div>
+
+  <!-- CHAPTER 02 FIXED CAPTION: VORTICITY SIMULATION BALL WITH ARROWS -->
+  <div id="hud-2" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
+    <p class="text-xs text-white/55 max-w-xl mx-auto text-center leading-relaxed font-normal">
+      <span class="text-white/85 font-mono text-[11px]">Helmholtz vorticity transport (∇·u = 0, ω = ∇×u)</span> · Velocity vectors deflect tangentially around the impermeable sphere (u·n̂ = 0) and shed alternating Kármán vortices in the downstream wake.
+    </p>
+  </div>
+
+  <!-- CHAPTER 03 FIXED CAPTION: 3D IRIDESCENT DIELECTRIC WAVE CONTINUUM -->
+  <div id="hud-3" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
+    <p class="text-xs text-white/55 max-w-xl mx-auto text-center leading-relaxed font-normal">
+      <span class="text-white/85 font-mono text-[11px]">d'Alembert wave equation (∂²u/∂t² = c²∇²u)</span> · Coupled 3D phase-space oscillators propagate energy without mass drift, rendered with thin-film Fresnel dielectric interference.
+    </p>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 400VH NATIVE SCROLL TRACK (ALLOWS NATIVE SCROLLBAR, WHEEL & TOUCH)    -->
+  <!-- ===================================================================== -->
+  <main class="relative z-10 w-full">
+    <section id="sec-0" class="w-full h-screen"></section>
+    <section id="sec-1" class="w-full h-screen"></section>
+    <section id="sec-2" class="w-full h-screen"></section>
+    <section id="sec-3" class="w-full h-screen"></section>
+  </main>
+
+  <script>
+    // =========================================================================
+    // UNIFIED 4-CHAPTER 3D WEBGL + 2D VORTICITY VECTOR FIELD ENGINE
+    // - 00 · Cube (stage 0.0): Small imperfect 3D cube in the center on #000000
+    // - 01 · Liquid Chrome (stage 1.0): Cube fractures outward into 9 full-screen
+    //   3D Liquid Chrome droplets with surface-tension meniscus bridges
+    // - 01 -> 02 Morph (stage 1.0 -> 2.0): All 9 Liquid Chrome droplets rush
+    //   inward and coalesce into the single central Vorticity Simulation Ball,
+    //   morphing into a dark obsidian/titanium collider sphere surrounded by a
+    //   live velocity vector arrow field (u(x,y)) and 700 advected vortex
+    //   streamline particles!
+    // - 02 -> 03 Morph (stage 2.0 -> 3.0): Vorticity arrows fade out as the
+    //   central ball expands into the 3D Iridescent Dielectric Wave Lattice.
+    // =========================================================================
+    (function initAxiomEngine() {
+      const glCanvas = document.getElementById('webgl-stage');
+      const gl = glCanvas.getContext('webgl2') || glCanvas.getContext('webgl');
+      const vortCanvas = document.getElementById('vorticity-stage');
+      const vctx = vortCanvas.getContext('2d');
+      if (!gl || !vctx) return;
+
+      let targetStage = 0.0;
+      let smoothStage = 0.0;
+      let stageVel = 0.0;
+
+      let ptrX = 0.0, ptrY = 0.0;
+      let matOverride = -1;
+      let breachMode = 0.0;
+      let impulseAmp = 0.0;
+      const t0 = performance.now();
+
+      // 9 3D Liquid-Metal Droplets symmetrically distributed around (0, 0) for Stage 1
+      const baseAnchors = [
+        { ax: 0.00, ay: 0.04, az: 0.06, r: 0.25 },
+        { ax: -0.44, ay: 0.22, az: -0.04, r: 0.22 },
+        { ax: 0.46, ay: 0.20, az: 0.04, r: 0.22 },
+        { ax: -0.52, ay: -0.22, az: 0.06, r: 0.21 },
+        { ax: 0.50, ay: -0.24, az: -0.06, r: 0.21 },
+        { ax: -0.18, ay: 0.36, az: -0.08, r: 0.19 },
+        { ax: 0.20, ay: -0.35, az: 0.08, r: 0.20 },
+        { ax: -0.82, ay: 0.02, az: -0.04, r: 0.19 },
+        { ax: 0.82, ay: 0.00, az: 0.12, r: 0.19 }
+      ];
+      const offsets = baseAnchors.map(() => ({ vx: 0, vy: 0, ox: 0, oy: 0 }));
+
+      function cubicHermite(edge0, edge1, x) {
+        const t = Math.max(0.0, Math.min(1.0, (x - edge0) / (edge1 - edge0)));
+        return t * t * (3.0 - 2.0 * t);
+      }
+
+      let lastWheelTs = 0;
+
+      function setStageTarget(newStage, syncScroll = true) {
+        targetStage = Math.max(0.0, Math.min(3.0, newStage));
+        if (syncScroll) {
+          const vh = Math.max(1, window.innerHeight);
+          window.scrollTo(0, targetStage * vh);
+        }
+      }
+
+      function readScroll() {
+        // If wheel/touch is actively driving targetStage, don't let delayed scroll events overwrite it
+        if (performance.now() - lastWheelTs < 120) return;
+        const vh = Math.max(1, window.innerHeight);
+        const newTarget = Math.max(0.0, Math.min(3.0, window.scrollY / vh));
+        if (Math.abs(newTarget - targetStage) > 0.65) {
+          smoothStage = newTarget;
+          stageVel = 0.0;
+        }
+        targetStage = newTarget;
+      }
+      window.addEventListener('scroll', readScroll, { passive: true });
+      readScroll();
+
+      // Direct wheel/trackpad handler so scrolling ALWAYS works even inside sandboxed preview iframes
+      window.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          lastWheelTs = performance.now();
+          const vh = Math.max(400, window.innerHeight);
+          // Normalize wheel delta (line mode vs pixel mode)
+          const dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+          setStageTarget(targetStage + dy / (vh * 0.85), true);
+        },
+        { passive: false }
+      );
+
+      // Touch drag / swipe support
+      let touchStartY = null;
+      let touchStartStage = 0;
+      window.addEventListener(
+        'touchstart',
+        (e) => {
+          if (e.touches.length === 1) {
+            touchStartY = e.touches[0].clientY;
+            touchStartStage = targetStage;
+          }
+        },
+        { passive: true }
+      );
+      window.addEventListener(
+        'touchmove',
+        (e) => {
+          if (touchStartY !== null && e.touches.length === 1) {
+            lastWheelTs = performance.now();
+            const dy = touchStartY - e.touches[0].clientY;
+            const vh = Math.max(400, window.innerHeight);
+            setStageTarget(touchStartStage + dy / (vh * 0.75), true);
+          }
+        },
+        { passive: true }
+      );
+      window.addEventListener('touchend', () => {
+        touchStartY = null;
+      });
+
+      // Keyboard navigation (ArrowDown / ArrowUp / Space / PageDown / PageUp)
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+          e.preventDefault();
+          lastWheelTs = performance.now();
+          setStageTarget(Math.min(3.0, Math.floor(targetStage + 0.35) + 1.0), true);
+        } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+          e.preventDefault();
+          lastWheelTs = performance.now();
+          setStageTarget(Math.max(0.0, Math.ceil(targetStage - 0.35) - 1.0), true);
+        }
+      });
+
+      // Brand link & scroll prompt click handlers
+      document.getElementById('brand-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        lastWheelTs = performance.now();
+        setStageTarget(0.0, true);
+      });
+      document.getElementById('scroll-prompt').addEventListener('click', (e) => {
+        e.preventDefault();
+        lastWheelTs = performance.now();
+        setStageTarget(1.0, true);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        ptrX = (e.clientX / window.innerWidth) * 2.0 - 1.0;
+        ptrY = -((e.clientY / window.innerHeight) * 2.0 - 1.0);
+      });
+
+      function fireImpulse() {
+        impulseAmp = 1.0;
+        offsets.forEach((o, idx) => {
+          const ang = idx * 0.7 + performance.now() * 0.01;
+          o.vx += Math.cos(ang) * 0.28;
+          o.vy += Math.sin(ang) * 0.28;
+        });
+      }
+
+      window.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'INPUT') return;
+        fireImpulse();
+      });
+
+      // Schedule Call Modal Handlers
+      const schedModal = document.getElementById('schedule-modal');
+      const schedBtn = document.getElementById('schedule-call-btn');
+      const closeModalBtn = document.getElementById('close-modal-btn');
+      const schedForm = document.getElementById('schedule-form');
+      const schedSubmitBtn = document.getElementById('schedule-submit-btn');
+
+      schedBtn.addEventListener('click', () => {
+        schedModal.classList.remove('hidden');
+        schedModal.classList.add('flex');
+      });
+      closeModalBtn.addEventListener('click', () => {
+        schedModal.classList.add('hidden');
+        schedModal.classList.remove('flex');
+      });
+      schedModal.addEventListener('click', (e) => {
+        if (e.target === schedModal) {
+          schedModal.classList.add('hidden');
+          schedModal.classList.remove('flex');
+        }
+      });
+      document.querySelectorAll('.slot-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      schedForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        schedSubmitBtn.textContent = '✓ Call Invite Sent';
+        schedSubmitBtn.className = 'w-full py-2.5 rounded-full bg-emerald-500 text-black text-xs font-mono font-semibold uppercase tracking-wider cursor-pointer';
+        setTimeout(() => {
+          schedModal.classList.add('hidden');
+          schedModal.classList.remove('flex');
+        }, 1100);
+      });
+
+      // =======================================================================
+      // PART A: 3D WEBGL RAYMARCHER (CUBE -> LIQUID CHROME -> VORTICITY BALL -> DIELECTRIC)
+      // =======================================================================
+      const vs = `
+        attribute vec2 a_pos;
+        varying vec2 v_uv;
+        void main() {
+          v_uv = a_pos;
+          gl_Position = vec4(a_pos, 0.0, 1.0);
+        }
+      `;
+
+      const fs = `
+        precision highp float;
+        varying vec2 v_uv;
+        uniform vec2 u_res;
+        uniform float u_time;
+        uniform float u_stage;
+        uniform float u_vort;
+        uniform float u_impulse;
+        uniform float u_breach;
+        uniform int u_mat;
+        uniform vec4 u_drops[9];
+
+        mat2 rot(float a) {
+          float s = sin(a), c = cos(a);
+          return mat2(c, -s, s, c);
+        }
+
+        float smin(float a, float b, float k) {
+          float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+          return mix(b, a, h) - k * h * (1.0 - h);
+        }
+
+        float sdRoundBox(vec3 p, vec3 b, float r) {
+          vec3 q = abs(p) - b;
+          return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
+        }
+
+        // Small Imperfect Cube at Stage 0.0
+        float sdImperfectCube(vec3 p, float size, float melt) {
+          vec3 q = p;
+          q.xz *= rot(u_time * 0.38 + melt * 2.2);
+          q.xy *= rot(u_time * 0.25 - melt * 1.5);
+
+          float bevel = mix(0.016, size * 0.65, melt);
+          float box = sdRoundBox(q, vec3(size), bevel);
+
+          float facets = (
+            sin(q.x * 26.0 + 0.4) *
+            cos(q.y * 24.0 - 0.3) *
+            sin(q.z * 28.0 + 0.7)
+          ) * 0.0055 * (1.0 - melt * 0.5);
+
+          float micro = sin(q.x * 68.0) * sin(q.y * 64.0) * sin(q.z * 70.0) * 0.0014;
+          float dent = exp(-length(q - vec3(size * 0.62, size * 0.48, size * 0.52)) * 18.0) * 0.015;
+          float cornerChip = exp(-length(q - vec3(-size * 0.78, size * 0.75, size * 0.72)) * 22.0) * 0.011;
+
+          return box + facets + micro - dent + cornerChip;
+        }
+
+        float mapWorld(vec3 p) {
+          float melt01 = clamp(u_stage, 0.0, 1.0);
+
+          // 1. Small Imperfect Cube at Stage 0.0
+          float cubeSize = 0.155 * (1.0 - smoothstep(0.45, 0.92, melt01)) * (1.0 + u_impulse * 0.14);
+          float d = (cubeSize > 0.004) ? sdImperfectCube(p, cubeSize, melt01) : 100.0;
+
+          if (u_stage < 0.02) return d;
+
+          // 2. Smoothly evolving 9 Liquid-Chrome Bodies (which coalesce into 1 central Vorticity Ball at Stage 2.0!)
+          float kBlend = mix(0.24, 0.12, u_vort);
+          float dFluid = 100.0;
+          for (int i = 0; i < 9; i++) {
+            float sd = length(p - u_drops[i].xyz) - u_drops[i].w;
+            dFluid = smin(dFluid, sd, kBlend);
+          }
+
+          return smin(d, dFluid, 0.18);
+        }
+
+        vec3 calcNormal(vec3 p) {
+          vec2 e = vec2(0.0016, 0.0);
+          return normalize(vec3(
+            mapWorld(p + e.xyy) - mapWorld(p - e.xyy),
+            mapWorld(p + e.yxy) - mapWorld(p - e.yxy),
+            mapWorld(p + e.yyx) - mapWorld(p - e.yyx)
+          ));
+        }
+
+        float softShadow(vec3 ro, vec3 rd) {
+          float res = 1.0;
+          float t = 0.03;
+          for (int i = 0; i < 16; i++) {
+            float h = mapWorld(ro + rd * t);
+            res = min(res, 7.0 * h / t);
+            t += clamp(h, 0.02, 0.15);
+            if (res < 0.01 || t > 2.2) break;
+          }
+          return clamp(res, 0.0, 1.0);
+        }
+
+        void main() {
+          float aspect = u_res.x / u_res.y;
+          vec2 uv = v_uv * vec2(aspect, 1.0);
+
+          vec3 ro = vec3(0.0, 0.04, 2.05);
+          vec3 rd = normalize(vec3(uv * 0.58, -1.0));
+
+          // At u_stage = 0.0: 100% pure pitch black (#000000)
+          float studioVis = smoothstep(0.18, 0.75, u_stage);
+          vec3 col = vec3(0.0);
+          col += studioVis * mix(vec3(0.014, 0.016, 0.022), vec3(0.04, 0.046, 0.064), clamp(v_uv.y * 0.5 + 0.5, 0.0, 1.0));
+
+          // Perspective Studio Floor Grid & Soft Shadows
+          float floorY = -0.52;
+          if (studioVis > 0.01 && rd.y < -0.001) {
+            float tf = (floorY - ro.y) / rd.y;
+            if (tf > 0.0 && tf < 7.0) {
+              vec3 fp = ro + rd * tf;
+              float advectX = fp.x - u_time * 0.9 * u_vort;
+              float gx = smoothstep(0.96, 0.996, cos(advectX * 14.0));
+              float gz = smoothstep(0.96, 0.996, cos(fp.z * 14.0));
+              float gridLine = max(gx, gz) * exp(-tf * 0.38);
+
+              vec3 lightDir = normalize(vec3(0.25, 0.92, 0.35));
+              float sh = softShadow(fp, lightDir);
+
+              vec3 floorCol = vec3(0.032, 0.036, 0.05) + vec3(0.20, 0.23, 0.30) * gridLine * 0.65;
+              floorCol *= (0.28 + 0.72 * sh);
+
+              float dAbove = mapWorld(fp + vec3(0.0, 0.28, 0.0));
+              vec3 causticTint = (u_vort > 0.5)
+                ? ((u_breach > 0.5) ? vec3(1.0, 0.15, 0.25) : vec3(0.06, 0.82, 0.65))
+                : vec3(1.0, 0.33, 0.15);
+              floorCol += causticTint * exp(-max(dAbove, 0.0) * 5.5) * 0.30;
+
+              col = mix(col, floorCol, studioVis * exp(-tf * 0.2));
+            }
+          }
+
+          // Raymarch with analytical silhouette anti-aliasing
+          float t = 0.0;
+          float minD = 100.0;
+          float hitT = 0.0;
+          for (int i = 0; i < 42; i++) {
+            vec3 p = ro + rd * t;
+            float d = mapWorld(p);
+            if (d < minD) {
+              minD = d;
+              hitT = t;
+            }
+            if (d < 0.0015) {
+              minD = 0.0;
+              hitT = t;
+              break;
+            }
+            if (t > 3.4) break;
+            t += d * 0.86;
+          }
+
+          float cov = smoothstep(0.0065, 0.001, minD);
+          if (cov > 0.001) {
+            vec3 pos = ro + rd * hitT;
+            vec3 n = calcNormal(pos);
+            vec3 v = -rd;
+            vec3 r = reflect(-v, n);
+
+            vec3 l1 = normalize(vec3(-0.6, 0.78, 0.7));
+            vec3 l2 = normalize(vec3(0.8, -0.45, 0.45));
+
+            float diff1 = max(dot(n, l1), 0.0);
+            float spec1 = pow(max(dot(r, l1), 0.0), 52.0);
+            float spec2 = pow(max(dot(r, l2), 0.0), 22.0);
+            float fresnel = pow(1.0 - max(dot(n, v), 0.0), 3.2);
+
+            float softbox = smoothstep(0.55, 0.68, r.y) * smoothstep(0.96, 0.82, r.y);
+            float env = 0.22 + 0.78 * smoothstep(-0.45, 0.85, r.y) + softbox * 1.1;
+
+            // Stage 0.0: Forged Imperfect Graphite Cube
+            vec3 cubeCol = mix(vec3(0.06, 0.062, 0.07), vec3(0.46, 0.47, 0.50), diff1 * 0.75 + env * 0.35);
+            cubeCol += vec3(0.95, 0.96, 1.0) * spec1 * 0.95;
+            cubeCol += vec3(0.85, 0.88, 0.95) * fresnel * 0.55;
+            float fractureHeat = sin(clamp(u_stage, 0.0, 1.0) * 3.14159);
+            cubeCol += vec3(1.0, 0.33, 0.12) * (fresnel * fractureHeat * 1.3 + spec2 * fractureHeat * 0.7);
+
+            // Stage 1.0: Mirror Liquid Chrome
+            vec3 chromeCol = mix(vec3(0.05, 0.06, 0.08), vec3(0.92, 0.94, 0.98), env) * (0.38 + 0.68 * diff1);
+            chromeCol += vec3(1.0) * spec1 * 1.5;
+            chromeCol += vec3(1.0, 0.33, 0.15) * (fresnel * 0.85 + spec2 * 0.45);
+
+            // Copper option (if toggled in Stage 1 HUD)
+            vec3 copperCol = mix(vec3(0.11, 0.035, 0.015), vec3(1.0, 0.50, 0.22), env) * (0.4 + 0.7 * diff1);
+            copperCol += vec3(1.0, 0.88, 0.72) * spec1 * 1.5 + vec3(1.0, 0.65, 0.3) * fresnel * 0.9;
+
+            // Stage 2.0: Original Vorticity Simulation Collider Ball (Dark Obsidian-Titanium Sphere with Laminar SDF Rim)
+            vec3 vortRim = (u_breach > 0.5) ? vec3(1.0, 0.18, 0.32) : vec3(0.06, 0.88, 0.68);
+            vec3 vortBallCol = mix(vec3(0.03, 0.038, 0.052), vec3(0.22, 0.27, 0.36), diff1 * 0.65 + env * 0.35);
+            vortBallCol += vec3(0.85, 0.95, 1.0) * spec1 * 0.95;
+            // Subtle latitude/longitude geodesic grid etched into the Vorticity Collider Ball
+            float latGrid = smoothstep(0.96, 0.995, cos(pos.y * 28.0)) + smoothstep(0.96, 0.995, cos(pos.x * 28.0));
+            vortBallCol += vortRim * latGrid * 0.12;
+            vortBallCol += vortRim * (fresnel * 1.35 + max(0.0, -n.x) * 0.35);
+
+            // Stage 3.0: Iridescent Optical Dielectric
+            vec3 irid = 0.5 + 0.5 * cos(6.283 * (fresnel * 0.9 + vec3(0.0, 0.22, 0.45) + r.xyx * 0.4));
+            vec3 glassCol = mix(vec3(0.05, 0.07, 0.12), irid, 0.65 * env) + vec3(1.0) * spec1 * 1.55 + irid * fresnel * 1.1;
+
+            vec3 stage1Mat = chromeCol;
+            if (u_mat == 1) stage1Mat = copperCol;
+            else if (u_mat == 2) stage1Mat = glassCol;
+
+            // Morph material smoothly: Stage 1 (Liquid Chrome) -> Stage 2 (Vorticity Collider Ball) -> Stage 3 (Dielectric Wave)
+            vec3 activeCol = mix(stage1Mat, vortBallCol, u_vort);
+            activeCol = mix(activeCol, glassCol, smoothstep(2.08, 2.85, u_stage));
+
+            vec3 surfCol = mix(cubeCol, activeCol, smoothstep(0.15, 0.72, u_stage));
+            col = mix(col, surfCol, cov);
+          }
+
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `;
+
+      function compile(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      }
+
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compile(gl.VERTEX_SHADER, vs));
+      gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        gl.STATIC_DRAW
+      );
+      const aPos = gl.getAttribLocation(prog, 'a_pos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      const uRes = gl.getUniformLocation(prog, 'u_res');
+      const uTime = gl.getUniformLocation(prog, 'u_time');
+      const uStage = gl.getUniformLocation(prog, 'u_stage');
+      const uVort = gl.getUniformLocation(prog, 'u_vort');
+      const uImpulse = gl.getUniformLocation(prog, 'u_impulse');
+      const uBreach = gl.getUniformLocation(prog, 'u_breach');
+      const uMat = gl.getUniformLocation(prog, 'u_mat');
+      const uDrops = gl.getUniformLocation(prog, 'u_drops[0]');
+
+      // =======================================================================
+      // PART B: 2D VORTICITY VECTOR ARROWS & ADVECTION PARTICLES (STAGE 02)
+      // =======================================================================
+      const NUM_PARTICLES = 620;
+      const particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push({
+          x: Math.random(),
+          y: Math.random(),
+          px: 0,
+          py: 0,
+          speed: 0.65 + Math.random() * 0.55,
+          hueShift: Math.random()
+        });
+      }
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        glCanvas.width = window.innerWidth * dpr;
+        glCanvas.height = window.innerHeight * dpr;
+        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+
+        vortCanvas.width = window.innerWidth * dpr;
+        vortCanvas.height = window.innerHeight * dpr;
+        vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Exact Incompressible Potential-Flow + Kármán Vortex Street Velocity Field u(x, y, t)
+      // around the sphere at (cxPx, cyPx) with pixel radius R
+      function sampleVelocityField(x, y, cx, cy, R, now, isBreach) {
+        const dx = x - cx;
+        const dy = y - cy;
+        const d2 = dx * dx + dy * dy;
+        const dist = Math.sqrt(d2) || 0.001;
+
+        // Freestream velocity U0 flowing left -> right
+        let vx = 1.0;
+        let vy = 0.0;
+
+        if (!isBreach) {
+          // 1. Potential flow dipole around impermeable cylinder/sphere of effective radius Reff
+          const Reff = R * 1.06;
+          const R2 = Reff * Reff;
+          if (dist > Reff * 0.85) {
+            const invD4 = 1.0 / Math.max(R2 * R2 * 0.5, d2 * d2);
+            vx = 1.0 - R2 * (dx * dx - dy * dy) * invD4;
+            vy = -2.0 * R2 * dx * dy * invD4;
+          } else {
+            // Inside boundary: strong outward normal projection
+            vx = (dx / dist) * 1.5;
+            vy = (dy / dist) * 1.5;
+          }
+
+          // 2. Downstream Kármán Vortex Street wake oscillation (dx > 0)
+          if (dx > -R * 0.3) {
+            const wakeX = Math.max(0, dx);
+            const wakeEnv = Math.exp(-wakeX / (R * 4.2)) * Math.exp(-(dy * dy) / (R * R * 1.8));
+            const phase = wakeX * 0.032 - now * 5.2;
+            vy += Math.sin(phase) * 0.72 * wakeEnv;
+            vx += Math.cos(phase) * 0.24 * Math.sign(dy || 1) * wakeEnv;
+          }
+        } else {
+          // Raw Diffusion Breach: unphysical turbulent waves that ignore the solid sphere boundary
+          vx = 1.0 + 0.25 * Math.cos(x * 0.015 - now * 3.5);
+          vy = 0.38 * Math.sin(x * 0.018 - now * 4.2 + y * 0.012);
+        }
+
+        return { vx, vy, dist };
+      }
+
+      function renderVorticityOverlay(wVort, cxPx, cyPx, radiusPx, now) {
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        vortCanvas.style.opacity = wVort.toFixed(3);
+        vctx.clearRect(0, 0, W, H);
+        if (wVort < 0.01) return;
+
+        const isBreach = breachMode > 0.5;
+        vctx.save();
+        vctx.globalAlpha = wVort;
+
+        // 1. Draw Live Velocity Vector Field Arrows (u(x,y)) across the viewport
+        const spacing = 46;
+        const cols = Math.ceil(W / spacing);
+        const rows = Math.ceil(H / spacing);
+
+        for (let r = 1; r < rows; r++) {
+          for (let c = 1; c < cols; c++) {
+            // Morph arrow positions slightly outward from the center during transition (wVort: 0 -> 1)
+            const gx = c * spacing;
+            const gy = r * spacing;
+            const x = cxPx + (gx - cxPx) * (0.35 + 0.65 * wVort);
+            const y = cyPx + (gy - cyPx) * (0.35 + 0.65 * wVort);
+
+            const dx = x - cxPx;
+            const dy = y - cyPx;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Skip arrows inside the solid 3D sphere silhouette (unless in breach mode)
+            if (!isBreach && dist < radiusPx * 1.08) continue;
+
+            const { vx, vy } = sampleVelocityField(x, y, cxPx, cyPx, radiusPx, now, isBreach);
+            const mag = Math.sqrt(vx * vx + vy * vy);
+            const ang = Math.atan2(vy, vx);
+
+            // Highlight shear-layer & wake vorticity near the ball
+            const nearBall = Math.exp(-Math.max(0, dist - radiusPx) / (radiusPx * 1.65));
+            const arrowLen = Math.min(24, (10 + mag * 7.5) * (0.65 + 0.35 * wVort));
+
+            const tx = x + Math.cos(ang) * arrowLen;
+            const ty = y + Math.sin(ang) * arrowLen;
+
+            if (isBreach && dist < radiusPx * 1.15) {
+              vctx.strokeStyle = `rgba(255, 62, 95, ${0.45 + 0.45 * nearBall})`;
+              vctx.fillStyle = `rgba(255, 62, 95, ${0.55 + 0.45 * nearBall})`;
+            } else if (nearBall > 0.28) {
+              // High-vorticity shear layer & Kármán wake arrows (bright emerald/cyan -> orange)
+              const shearMix = Math.min(1, (mag - 0.95) * 1.8);
+              if (shearMix > 0.45) {
+                vctx.strokeStyle = `rgba(16, 235, 175, ${0.32 + 0.55 * nearBall})`;
+                vctx.fillStyle = `rgba(16, 235, 175, ${0.45 + 0.50 * nearBall})`;
+              } else {
+                vctx.strokeStyle = `rgba(95, 185, 255, ${0.24 + 0.45 * nearBall})`;
+                vctx.fillStyle = `rgba(95, 185, 255, ${0.35 + 0.45 * nearBall})`;
+              }
+            } else {
+              // Ambient freestream velocity vectors
+              vctx.strokeStyle = 'rgba(180, 198, 225, 0.20)';
+              vctx.fillStyle = 'rgba(180, 198, 225, 0.28)';
+            }
+
+            vctx.lineWidth = nearBall > 0.35 ? 1.45 : 1.05;
+            vctx.beginPath();
+            vctx.moveTo(x, y);
+            vctx.lineTo(tx, ty);
+            vctx.stroke();
+
+            // Crisp vector arrowhead
+            const headLen = nearBall > 0.35 ? 4.8 : 3.8;
+            vctx.beginPath();
+            vctx.moveTo(tx, ty);
+            vctx.lineTo(tx - headLen * Math.cos(ang - 0.48), ty - headLen * Math.sin(ang - 0.48));
+            vctx.lineTo(tx - headLen * Math.cos(ang + 0.48), ty - headLen * Math.sin(ang + 0.48));
+            vctx.closePath();
+            vctx.fill();
+          }
+        }
+
+        // 2. Advect & Render 620 High-Speed Fluid Streamline Filaments around the Ball
+        vctx.lineCap = 'round';
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+          const p = particles[i];
+          let px = p.x * W;
+          let py = p.y * H;
+
+          const { vx, vy, dist } = sampleVelocityField(px, py, cxPx, cyPx, radiusPx, now, isBreach);
+          const step = 4.4 * p.speed;
+          let nx = px + vx * step;
+          let ny = py + vy * step;
+
+          // Strictly enforce SDF Impermeability (∇ · u = 0, u · n = 0) on the 3D ball perimeter
+          const ndx = nx - cxPx;
+          const ndy = ny - cyPx;
+          const ndist = Math.sqrt(ndx * ndx + ndy * ndy) || 0.001;
+          const minR = radiusPx * 1.03;
+
+          if (!isBreach && ndist < minR) {
+            nx = cxPx + (ndx / ndist) * minR;
+            ny = cyPx + (ndy / ndist) * minR;
+          }
+
+          // Draw streamline streak
+          const nearCollider = Math.exp(-Math.max(0, ndist - radiusPx) / (radiusPx * 1.25));
+          vctx.lineWidth = 1.2 + nearCollider * 1.4;
+          if (isBreach && ndist < radiusPx * 1.05) {
+            vctx.strokeStyle = 'rgba(255, 65, 95, 0.88)';
+          } else if (nearCollider > 0.35) {
+            vctx.strokeStyle = p.hueShift > 0.3
+              ? `rgba(16, 240, 180, ${0.45 + 0.5 * nearCollider})`
+              : `rgba(255, 110, 50, ${0.45 + 0.5 * nearCollider})`;
+          } else {
+            vctx.strokeStyle = 'rgba(130, 175, 235, 0.26)';
+          }
+
+          vctx.beginPath();
+          vctx.moveTo(px, py);
+          vctx.lineTo(nx, ny);
+          vctx.stroke();
+
+          // Wrap particle cleanly when exiting right edge
+          if (nx > W + 20 || ny < -30 || ny > H + 30) {
+            p.x = -0.01;
+            p.y = 0.08 + Math.random() * 0.84;
+          } else {
+            p.x = nx / W;
+            p.y = ny / H;
+          }
+        }
+
+        // 3. Draw Crisp SDF Boundary-Lock Telemetry Ring around the 3D Vorticity Ball
+        vctx.lineWidth = 1.5;
+        vctx.strokeStyle = isBreach ? 'rgba(255, 65, 95, 0.85)' : 'rgba(16, 235, 175, 0.78)';
+        vctx.setLineDash([7, 5]);
+        vctx.beginPath();
+        vctx.arc(cxPx, cyPx, radiusPx * 1.04, 0, Math.PI * 2);
+        vctx.stroke();
+        vctx.setLineDash([]);
+
+        // Subtle outer pressure-wave halo
+        vctx.lineWidth = 1.0;
+        vctx.strokeStyle = isBreach ? 'rgba(255, 65, 95, 0.22)' : 'rgba(16, 235, 175, 0.20)';
+        vctx.beginPath();
+        vctx.arc(cxPx, cyPx, radiusPx * 1.22, 0, Math.PI * 2);
+        vctx.stroke();
+
+        vctx.restore();
+      }
+
+      // =======================================================================
+      // MAIN ANIMATION LOOP
+      // =======================================================================
+      function animate() {
+        const now = (performance.now() - t0) * 0.001;
+        impulseAmp *= 0.92;
+
+        // Zero-overshoot exponential scroll integrator (strictly monotonic, never overshoots chapter boundaries)
+        smoothStage += (targetStage - smoothStage) * 0.18;
+        if (Math.abs(targetStage - smoothStage) < 0.001) {
+          smoothStage = targetStage;
+        }
+
+        // Update minimal UI elements based on smoothStage
+        const heroCap = document.getElementById('hero-caption');
+        const scrollPrompt = document.getElementById('scroll-prompt');
+        const homeFade = Math.max(0, 1 - smoothStage * 3.2);
+        heroCap.style.opacity = homeFade.toFixed(2);
+        scrollPrompt.style.opacity = homeFade.toFixed(2);
+        scrollPrompt.style.pointerEvents = homeFade > 0.3 ? 'auto' : 'none';
+
+        for (let i = 1; i < 4; i++) {
+          const hud = document.getElementById('hud-' + i);
+          if (hud) {
+            const secFade = Math.max(0, 1 - Math.abs(smoothStage - i) * 2.15);
+            hud.style.opacity = secFade.toFixed(2);
+          }
+        }
+
+        // Smooth C2 Hermite weights across chapters with clean plateaus at 1.0, 2.0, and 3.0:
+        // expand01: 0 -> 1 as Cube fractures into Liquid Chrome
+        // wToStage2: 0 -> 1 as Liquid Chrome coalesces into the single Vorticity Simulation Ball
+        // wToStage3: 0 -> 1 as Vorticity Ball expands into the 3D Dielectric Wave Lattice
+        const expand01 = Math.pow(cubicHermite(0.0, 0.92, smoothStage), 0.78);
+        const wToStage2 = cubicHermite(1.12, 1.88, smoothStage);
+        const wToStage3 = cubicHermite(2.12, 2.88, smoothStage);
+        const wVort = wToStage2 * (1.0 - wToStage3);
+
+        // Central Vorticity Simulation Ball position (centered at (0, 0) + subtle cursor steering)
+        const colliderX = ptrX * 0.24;
+        const colliderY = 0.04 + ptrY * 0.20;
+        const colliderR = 0.34;
+
+        const flatDrops = new Float32Array(36);
+
+        for (let i = 0; i < 9; i++) {
+          const b = baseAnchors[i];
+          const off = offsets[i];
+
+          off.vx = (off.vx - off.ox * 0.08) * 0.88;
+          off.vy = (off.vy - off.oy * 0.08) * 0.88;
+          off.ox += off.vx;
+          off.oy += off.vy;
+
+          // -----------------------------------------------------------------
+          // FORMATION 1: Full-Screen Liquid Chrome Cluster (Stage 1.0)
+          // -----------------------------------------------------------------
+          let x1 = b.ax + Math.sin(now * 0.95 + i * 1.4) * 0.16 + off.ox;
+          let y1 = b.ay + Math.cos(now * 1.1 + i * 1.7) * 0.15 + off.oy;
+          let z1 = b.az + Math.sin(now * 1.3 + i) * 0.10;
+          if (i === 8) {
+            x1 = ptrX * 0.65;
+            y1 = ptrY * 0.55;
+            z1 = 0.16;
+          }
+          const r1 = b.r;
+
+          // -----------------------------------------------------------------
+          // FORMATION 2: Coalesced Vorticity Simulation Ball (Stage 2.0)
+          // All 9 Liquid Chrome droplets rush inward to (colliderX, colliderY, 0)
+          // and fuse into ONE perfectly spherical aerodynamic collider ball!
+          // -----------------------------------------------------------------
+          const x2 = colliderX + off.ox * 0.25;
+          const y2 = colliderY + off.oy * 0.25;
+          const z2 = 0.0;
+          const r2 = i === 0 ? colliderR : colliderR * 0.72;
+
+          // -----------------------------------------------------------------
+          // FORMATION 3: 3D Harmonic Dielectric Wave Lattice (Stage 3.0)
+          // -----------------------------------------------------------------
+          const col = (i % 3) - 1;
+          const row = Math.floor(i / 3) - 1;
+          const x3 = col * 0.56 + off.ox + ptrX * 0.14;
+          const z3 = row * 0.36;
+          const y3 = Math.sin(now * 2.4 + col * 1.3 + row * 1.1) * 0.25 + off.oy + ptrY * 0.12;
+          const r3 = b.r * 0.95;
+
+          // Morph seamlessly: Stage 1 (Liquid Chrome) -> Stage 2 (Vorticity Ball) -> Stage 3 (Dielectric Wave)
+          const x12 = x1 * (1.0 - wToStage2) + x2 * wToStage2;
+          const y12 = y1 * (1.0 - wToStage2) + y2 * wToStage2;
+          const z12 = z1 * (1.0 - wToStage2) + z2 * wToStage2;
+          const r12 = r1 * (1.0 - wToStage2) + r2 * wToStage2;
+
+          const fx = (x12 * (1.0 - wToStage3) + x3 * wToStage3) * expand01;
+          const fy = (y12 * (1.0 - wToStage3) + y3 * wToStage3) * expand01;
+          const fz = (z12 * (1.0 - wToStage3) + z3 * wToStage3) * expand01;
+          const fr = (r12 * (1.0 - wToStage3) + r3 * wToStage3) * Math.max(0.005, expand01);
+
+          flatDrops[i * 4 + 0] = fx;
+          flatDrops[i * 4 + 1] = fy;
+          flatDrops[i * 4 + 2] = fz;
+          flatDrops[i * 4 + 3] = fr;
+        }
+
+        gl.uniform2f(uRes, glCanvas.width, glCanvas.height);
+        gl.uniform1f(uTime, now);
+        gl.uniform1f(uStage, smoothStage);
+        gl.uniform1f(uVort, wVort);
+        gl.uniform1f(uImpulse, impulseAmp);
+        gl.uniform1f(uBreach, breachMode);
+        gl.uniform1i(uMat, matOverride);
+        gl.uniform4fv(uDrops, flatDrops);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        // Compute exact 2D screen-space projection of the 3D Vorticity Ball for the Vector Arrow Overlay
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const aspect = W / Math.max(1, H);
+        // Camera is at (0, 0.04, 2.05) with fov scale 0.58 => 2.05 * 0.58 = 1.189
+        const vUvX = colliderX / (1.189 * aspect);
+        const vUvY = (colliderY - 0.04) / 1.189;
+        const cxPx = (0.5 + 0.5 * vUvX) * W;
+        const cyPx = (0.5 - 0.5 * vUvY) * H;
+        // Effective coalesced smin radius of the 9 overlapping spheres at (colliderX, colliderY, 0)
+        const eff3DRadius = colliderR * 1.18;
+        const radiusPx = (eff3DRadius / 1.189) * (H * 0.5);
+
+        renderVorticityOverlay(wVort, cxPx, cyPx, radiusPx, now);
+
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+  </script>
+</body>
+</html>
