@@ -508,6 +508,11 @@
       }
 
       schedBtn.addEventListener('click', openModal);
+      // Deep link from other pages (e.g. products.html → ./#schedule)
+      if (location.hash === '#schedule') openModal();
+      window.addEventListener('hashchange', () => {
+        if (location.hash === '#schedule') openModal();
+      });
       closeModalBtn.addEventListener('click', closeModal);
       schedModal.addEventListener('click', (e) => {
         if (e.target === schedModal) closeModal();
