@@ -2,10 +2,9 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Fermi — Physics, Compiled</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -24,6 +23,14 @@
       color: #F5F7FA;
       overflow-x: hidden;
       min-height: 400vh;
+      min-height: 400svh;
+    }
+
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
     }
 
     .font-mono {
@@ -41,7 +48,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 32px;
+      padding: calc(20px + var(--safe-top)) calc(32px + var(--safe-right)) 20px calc(32px + var(--safe-left));
       pointer-events: none;
     }
 
@@ -57,14 +64,18 @@
       flex-direction: column;
       justify-content: flex-end;
       align-items: center;
-      padding: 28px 24px 44px 24px;
+      padding: calc(28px + var(--safe-top)) calc(24px + var(--safe-right)) calc(44px + var(--safe-bottom)) calc(24px + var(--safe-left));
+    }
+
+    #scroll-prompt {
+      bottom: calc(10px + var(--safe-bottom));
     }
 
     #sticky-cta-dock {
       position: fixed;
       left: 0;
       right: 0;
-      bottom: 108px;
+      bottom: calc(108px + var(--safe-bottom));
       z-index: 45;
       display: flex;
       justify-content: center;
@@ -75,7 +86,31 @@
     #sec-0, #sec-1, #sec-2, #sec-3 {
       width: 100%;
       height: 100vh;
+      height: 100svh;
       display: block;
+    }
+
+    #schedule-modal {
+      padding: calc(24px + var(--safe-top)) calc(24px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(24px + var(--safe-left));
+    }
+
+    /* Phones: formula-only captions, tighter chrome */
+    @media (max-width: 600px) {
+      header {
+        padding: calc(16px + var(--safe-top)) calc(20px + var(--safe-right)) 16px calc(20px + var(--safe-left));
+      }
+      #hud-0, #hud-1, #hud-2, #hud-3 {
+        padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(16px + var(--safe-left));
+      }
+      .cap-desc {
+        display: none;
+      }
+      #sticky-cta-dock {
+        bottom: calc(84px + var(--safe-bottom));
+      }
+      #schedule-modal {
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+      }
     }
 
     /* Mock 2 (No Badge): Lower-Center Specular Ghost Capsule */
@@ -115,8 +150,8 @@
     #webgl-stage {
       position: fixed;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       z-index: 1;
       pointer-events: none;
       display: block;
@@ -126,8 +161,8 @@
     #vorticity-stage {
       position: fixed;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       z-index: 2;
       pointer-events: none;
       display: block;
@@ -175,7 +210,7 @@
   <canvas id="vorticity-stage"></canvas>
 
   <!-- MINIMAL FLOATING TOP BAR: FERMI BRAND MARK -->
-  <header class="fixed top-0 inset-x-0 z-50 px-6 sm:px-10 py-5 flex items-center justify-between pointer-events-none">
+  <header class="fixed top-0 inset-x-0 z-50 flex items-center justify-between pointer-events-none">
     <a href="#sec-0" id="brand-link" class="pointer-events-auto flex items-center gap-2.5 group">
       <span class="w-2 h-2 rounded-full bg-[#FF5526] shadow-[0_0_12px_#FF5526]"></span>
       <span class="font-mono text-xs font-semibold tracking-[0.22em] uppercase text-white/90 group-hover:text-white transition-colors">Fermi</span>
@@ -190,7 +225,7 @@
   </div>
 
   <!-- STICKY SCHEDULE CALL MODAL -->
-  <div id="schedule-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-6 bg-black/75 backdrop-blur-md">
+  <div id="schedule-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/75 backdrop-blur-md">
     <div class="glass-hud max-w-md w-full rounded-3xl p-7 border border-white/15 shadow-2xl space-y-5 relative pointer-events-auto">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -205,8 +240,9 @@
           30-minute live walkthrough of the model-agnostic 3D SDF & Navier–Stokes trajectory verifier over Veo, Kling, Runway, or custom DiT backbones.
         </p>
       </div>
-      <form id="schedule-form" class="space-y-3">
-        <input type="email" required placeholder="work@company.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/12 text-xs text-white placeholder-white/35 focus:outline-none focus:border-[#FF5526]" />
+      <form id="schedule-form" class="space-y-3" method="post">
+        <input type="email" name="email" autocomplete="email" required placeholder="work@company.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/12 text-xs text-white placeholder-white/35 focus:outline-none focus:border-[#FF5526]" />
+        <input type="hidden" name="slot" id="schedule-slot" value="Tue · 10:30 AM PT" />
         <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
           <button type="button" class="slot-btn hud-pill active py-2 rounded-xl cursor-pointer">Tue · 10:30 AM PT</button>
           <button type="button" class="slot-btn hud-pill py-2 rounded-xl cursor-pointer">Thu · 2:00 PM PT</button>
@@ -214,6 +250,7 @@
         <button type="submit" id="schedule-submit-btn" class="w-full py-2.5 rounded-full bg-[#FF5526] text-white text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#ff663d] transition-colors cursor-pointer">
           Confirm Call Invite
         </button>
+        <p id="schedule-status" class="hidden text-[11px] font-mono text-center" role="status" aria-live="polite"></p>
       </form>
     </div>
   </div>
@@ -224,11 +261,11 @@
   <div id="hud-0" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6">
     <div id="hero-caption" class="flex flex-col items-center text-center transition-opacity duration-200 max-w-md">
       <p class="text-xs text-white/45 leading-relaxed font-normal">
-        <span class="text-white/70 font-mono text-[11px]">Rigid-body lattice equilibrium (∑F = 0)</span> · Micro-faceted graphite seed with anisotropic surface dents prior to thermal phase transition.
+        <span class="text-white/70 font-mono text-[11px]">Rigid-body lattice equilibrium (∑F = 0)</span><span class="cap-desc"> · Micro-faceted graphite seed with anisotropic surface dents prior to thermal phase transition.</span>
       </p>
     </div>
 
-    <button id="scroll-prompt" class="fixed bottom-2.5 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1 text-[10px] font-mono tracking-[0.2em] text-white/35 hover:text-white transition-opacity duration-200 cursor-pointer bg-transparent border-0">
+    <button id="scroll-prompt" class="fixed left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1 text-[10px] font-mono tracking-[0.2em] text-white/35 hover:text-white transition-opacity duration-200 cursor-pointer bg-transparent border-0">
       <span>SCROLL</span>
       <div class="w-px h-4 bg-white/30 scroll-line"></div>
     </button>
@@ -237,21 +274,21 @@
   <!-- CHAPTER 01 FIXED CAPTION: LIQUID CHROME & SURFACE TENSION -->
   <div id="hud-1" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
     <p class="text-xs text-white/55 max-w-lg mx-auto text-center leading-relaxed font-normal">
-      <span class="text-white/85 font-mono text-[11px]">Young–Laplace capillarity (Δp = γ∇·n̂)</span> · Cohesive 3D smooth-SDF liquid metal bodies minimize surface area across high-curvature meniscus bridges while conserving total volume.
+      <span class="text-white/85 font-mono text-[11px]">Young–Laplace capillarity (Δp = γ∇·n̂)</span><span class="cap-desc"> · Cohesive 3D smooth-SDF liquid metal bodies minimize surface area across high-curvature meniscus bridges while conserving total volume.</span>
     </p>
   </div>
 
   <!-- CHAPTER 02 FIXED CAPTION: VORTICITY SIMULATION BALL WITH ARROWS -->
   <div id="hud-2" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
     <p class="text-xs text-white/55 max-w-xl mx-auto text-center leading-relaxed font-normal">
-      <span class="text-white/85 font-mono text-[11px]">Helmholtz vorticity transport (∇·u = 0, ω = ∇×u)</span> · Velocity vectors deflect tangentially around the impermeable sphere (u·n̂ = 0) and shed alternating Kármán vortices in the downstream wake.
+      <span class="text-white/85 font-mono text-[11px]">Helmholtz vorticity transport (∇·u = 0, ω = ∇×u)</span><span class="cap-desc"> · Velocity vectors deflect tangentially around the impermeable sphere (u·n̂ = 0) and shed alternating Kármán vortices in the downstream wake.</span>
     </p>
   </div>
 
   <!-- CHAPTER 03 FIXED CAPTION: 3D IRIDESCENT DIELECTRIC WAVE CONTINUUM -->
   <div id="hud-3" class="fixed inset-0 z-30 pointer-events-none flex flex-col items-center justify-end pb-12 px-6" style="opacity: 0;">
     <p class="text-xs text-white/55 max-w-xl mx-auto text-center leading-relaxed font-normal">
-      <span class="text-white/85 font-mono text-[11px]">d'Alembert wave equation (∂²u/∂t² = c²∇²u)</span> · Coupled 3D phase-space oscillators propagate energy without mass drift, rendered with thin-film Fresnel dielectric interference.
+      <span class="text-white/85 font-mono text-[11px]">d'Alembert wave equation (∂²u/∂t² = c²∇²u)</span><span class="cap-desc"> · Coupled 3D phase-space oscillators propagate energy without mass drift, rendered with thin-film Fresnel dielectric interference.</span>
     </p>
   </div>
 
@@ -259,12 +296,18 @@
   <!-- 400VH NATIVE SCROLL TRACK (ALLOWS NATIVE SCROLLBAR, WHEEL & TOUCH)    -->
   <!-- ===================================================================== -->
   <main class="relative z-10 w-full">
-    <section id="sec-0" class="w-full h-screen"></section>
-    <section id="sec-1" class="w-full h-screen"></section>
-    <section id="sec-2" class="w-full h-screen"></section>
-    <section id="sec-3" class="w-full h-screen"></section>
+    <section id="sec-0"></section>
+    <section id="sec-1"></section>
+    <section id="sec-2"></section>
+    <section id="sec-3"></section>
   </main>
 
+  <script>
+    // Endpoint that receives the schedule-call form as a multipart POST
+    // (e.g. a Formspree / Getform / Basin URL, or your own handler).
+    // Fields: email, slot. Leave empty to disable submission.
+    const FORM_ENDPOINT = '';
+  </script>
   <script>
     // =========================================================================
     // UNIFIED 4-CHAPTER 3D WEBGL + 2D VORTICITY VECTOR FIELD ENGINE
@@ -317,19 +360,24 @@
 
       let lastWheelTs = 0;
 
+      // Map the full scrollable range onto stages 0..3. Sections are sized in svh,
+      // and innerHeight changes as mobile browser chrome shows/hides, so dividing
+      // by innerHeight would drift; the scroll range is the stable reference.
+      function scrollRange() {
+        return Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      }
+
       function setStageTarget(newStage, syncScroll = true) {
         targetStage = Math.max(0.0, Math.min(3.0, newStage));
         if (syncScroll) {
-          const vh = Math.max(1, window.innerHeight);
-          window.scrollTo(0, targetStage * vh);
+          window.scrollTo(0, (targetStage / 3.0) * scrollRange());
         }
       }
 
       function readScroll() {
-        // If wheel/touch is actively driving targetStage, don't let delayed scroll events overwrite it
+        // If wheel/keys are actively driving targetStage, don't let delayed scroll events overwrite it
         if (performance.now() - lastWheelTs < 120) return;
-        const vh = Math.max(1, window.innerHeight);
-        const newTarget = Math.max(0.0, Math.min(3.0, window.scrollY / vh));
+        const newTarget = Math.max(0.0, Math.min(3.0, (window.scrollY / scrollRange()) * 3.0));
         if (Math.abs(newTarget - targetStage) > 0.65) {
           smoothStage = newTarget;
           stageVel = 0.0;
@@ -353,37 +401,15 @@
         { passive: false }
       );
 
-      // Touch drag / swipe support
-      let touchStartY = null;
-      let touchStartStage = 0;
-      window.addEventListener(
-        'touchstart',
-        (e) => {
-          if (e.touches.length === 1) {
-            touchStartY = e.touches[0].clientY;
-            touchStartStage = targetStage;
-          }
-        },
-        { passive: true }
-      );
-      window.addEventListener(
-        'touchmove',
-        (e) => {
-          if (touchStartY !== null && e.touches.length === 1) {
-            lastWheelTs = performance.now();
-            const dy = touchStartY - e.touches[0].clientY;
-            const vh = Math.max(400, window.innerHeight);
-            setStageTarget(touchStartStage + dy / (vh * 0.75), true);
-          }
-        },
-        { passive: true }
-      );
-      window.addEventListener('touchend', () => {
-        touchStartY = null;
-      });
-
       // Keyboard navigation (ArrowDown / ArrowUp / Space / PageDown / PageUp)
       window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          return;
+        }
+        // Leave keys alone while typing or while the modal is open
+        if (e.target.closest && e.target.closest('input, textarea, select, button, #schedule-modal')) return;
+        if (!schedModal.classList.contains('hidden')) return;
         if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
           e.preventDefault();
           lastWheelTs = performance.now();
@@ -432,35 +458,72 @@
       const closeModalBtn = document.getElementById('close-modal-btn');
       const schedForm = document.getElementById('schedule-form');
       const schedSubmitBtn = document.getElementById('schedule-submit-btn');
+      const schedSlot = document.getElementById('schedule-slot');
+      const schedStatus = document.getElementById('schedule-status');
+      const submitIdleClass = schedSubmitBtn.className;
+      const submitIdleText = schedSubmitBtn.textContent;
 
-      schedBtn.addEventListener('click', () => {
+      function setStatus(msg, isError) {
+        schedStatus.textContent = msg;
+        schedStatus.classList.toggle('hidden', !msg);
+        schedStatus.classList.toggle('text-red-400', !!isError);
+        schedStatus.classList.toggle('text-white/55', !isError);
+      }
+      function resetSubmit() {
+        schedSubmitBtn.disabled = false;
+        schedSubmitBtn.className = submitIdleClass;
+        schedSubmitBtn.textContent = submitIdleText;
+      }
+      function openModal() {
+        resetSubmit();
+        setStatus('');
         schedModal.classList.remove('hidden');
         schedModal.classList.add('flex');
-      });
-      closeModalBtn.addEventListener('click', () => {
+      }
+      function closeModal() {
         schedModal.classList.add('hidden');
         schedModal.classList.remove('flex');
-      });
+      }
+
+      schedBtn.addEventListener('click', openModal);
+      closeModalBtn.addEventListener('click', closeModal);
       schedModal.addEventListener('click', (e) => {
-        if (e.target === schedModal) {
-          schedModal.classList.add('hidden');
-          schedModal.classList.remove('flex');
-        }
+        if (e.target === schedModal) closeModal();
       });
       document.querySelectorAll('.slot-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
+          schedSlot.value = btn.textContent.trim();
         });
       });
-      schedForm.addEventListener('submit', (e) => {
+      schedForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        schedSubmitBtn.textContent = '✓ Call Invite Sent';
-        schedSubmitBtn.className = 'w-full py-2.5 rounded-full bg-emerald-500 text-black text-xs font-mono font-semibold uppercase tracking-wider cursor-pointer';
-        setTimeout(() => {
-          schedModal.classList.add('hidden');
-          schedModal.classList.remove('flex');
-        }, 1100);
+        if (!FORM_ENDPOINT) {
+          console.warn('Fermi: FORM_ENDPOINT is not set; the schedule form cannot be sent.');
+          setStatus('Scheduling is not configured yet. Please try again later.', true);
+          return;
+        }
+        schedSubmitBtn.disabled = true;
+        schedSubmitBtn.textContent = 'Sending…';
+        setStatus('');
+        try {
+          const res = await fetch(FORM_ENDPOINT, {
+            method: 'POST',
+            body: new FormData(schedForm),
+            headers: { Accept: 'application/json' }
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          schedSubmitBtn.textContent = '✓ Call Invite Sent';
+          schedSubmitBtn.className = 'w-full py-2.5 rounded-full bg-emerald-500 text-black text-xs font-mono font-semibold uppercase tracking-wider cursor-default';
+          schedForm.reset();
+          schedSlot.value = document.querySelector('.slot-btn.active').textContent.trim();
+          setTimeout(closeModal, 1400);
+        } catch (err) {
+          console.error('Fermi: schedule form submit failed', err);
+          resetSubmit();
+          setStatus('Could not send your request. Please try again.', true);
+        }
       });
 
       // =======================================================================
@@ -484,6 +547,7 @@
         uniform float u_vort;
         uniform float u_impulse;
         uniform float u_breach;
+        uniform float u_zoom;
         uniform int u_mat;
         uniform vec4 u_drops[9];
 
@@ -570,7 +634,7 @@
           vec2 uv = v_uv * vec2(aspect, 1.0);
 
           vec3 ro = vec3(0.0, 0.04, 2.05);
-          vec3 rd = normalize(vec3(uv * 0.58, -1.0));
+          vec3 rd = normalize(vec3(uv * 0.58 * u_zoom, -1.0));
 
           // At u_stage = 0.0: 100% pure pitch black (#000000)
           float studioVis = smoothstep(0.18, 0.75, u_stage);
@@ -718,6 +782,7 @@
       const uImpulse = gl.getUniformLocation(prog, 'u_impulse');
       const uBreach = gl.getUniformLocation(prog, 'u_breach');
       const uMat = gl.getUniformLocation(prog, 'u_mat');
+      const uZoom = gl.getUniformLocation(prog, 'u_zoom');
       const uDrops = gl.getUniformLocation(prog, 'u_drops[0]');
 
       // =======================================================================
@@ -736,17 +801,59 @@
         });
       }
 
-      function resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-        glCanvas.width = window.innerWidth * dpr;
-        glCanvas.height = window.innerHeight * dpr;
-        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+      // Phones (portrait or landscape) render at 1x; the raymarcher is fill-rate bound.
+      const phoneMQ = window.matchMedia('(max-width: 600px), (pointer: coarse) and (max-height: 600px)');
 
-        vortCanvas.width = window.innerWidth * dpr;
-        vortCanvas.height = window.innerHeight * dpr;
-        vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Shared camera model, used by BOTH the WebGL raymarcher and the 2D arrow
+      // overlay so the projected collider ring always lines up with the ball.
+      // Camera at z = 2.05 with lens scale 0.58 => half-height of the z = 0 plane
+      // is 2.05 * 0.58 = 1.189 world units. In portrait we zoom out so the
+      // horizontal extent never drops below the square (aspect = 1) framing.
+      const CAM_Z = 2.05;
+      const CAM_Y = 0.04;
+      const LENS = 0.58;
+      const camera = { W: 1, H: 1, aspect: 1, zoom: 1, halfH: CAM_Z * LENS };
+
+      function updateCamera(W, H) {
+        camera.W = W;
+        camera.H = H;
+        camera.aspect = W / Math.max(1, H);
+        camera.zoom = Math.max(1.0, 1.0 / camera.aspect);
+        camera.halfH = CAM_Z * LENS * camera.zoom;
+      }
+
+      // World point on the z = 0 plane -> CSS pixels
+      function projectToScreen(x, y) {
+        const ndcX = x / (camera.halfH * camera.aspect);
+        const ndcY = (y - CAM_Y) / camera.halfH;
+        return { x: (0.5 + 0.5 * ndcX) * camera.W, y: (0.5 - 0.5 * ndcY) * camera.H };
+      }
+      function worldToPx(len) {
+        return (len / camera.halfH) * (camera.H * 0.5);
+      }
+
+      function resize() {
+        const W = Math.max(1, glCanvas.clientWidth || window.innerWidth);
+        const H = Math.max(1, glCanvas.clientHeight || window.innerHeight);
+        const dpr = phoneMQ.matches ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+        const bw = Math.round(W * dpr);
+        const bh = Math.round(H * dpr);
+
+        updateCamera(W, H);
+
+        if (glCanvas.width !== bw || glCanvas.height !== bh) {
+          glCanvas.width = bw;
+          glCanvas.height = bh;
+          gl.viewport(0, 0, bw, bh);
+        }
+        if (vortCanvas.width !== bw || vortCanvas.height !== bh) {
+          vortCanvas.width = bw;
+          vortCanvas.height = bh;
+        }
+        vctx.setTransform(bw / W, 0, 0, bh / H, 0, 0);
       }
       window.addEventListener('resize', resize);
+      if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', resize);
       resize();
 
       // Exact Incompressible Potential-Flow + Kármán Vortex Street Velocity Field u(x, y, t)
@@ -793,8 +900,8 @@
       }
 
       function renderVorticityOverlay(wVort, cxPx, cyPx, radiusPx, now) {
-        const W = window.innerWidth;
-        const H = window.innerHeight;
+        const W = camera.W;
+        const H = camera.H;
         vortCanvas.style.opacity = wVort.toFixed(3);
         vctx.clearRect(0, 0, W, H);
         if (wVort < 0.01) return;
@@ -1050,25 +1157,19 @@
         gl.uniform1f(uVort, wVort);
         gl.uniform1f(uImpulse, impulseAmp);
         gl.uniform1f(uBreach, breachMode);
+        gl.uniform1f(uZoom, camera.zoom);
         gl.uniform1i(uMat, matOverride);
         gl.uniform4fv(uDrops, flatDrops);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        // Compute exact 2D screen-space projection of the 3D Vorticity Ball for the Vector Arrow Overlay
-        const W = window.innerWidth;
-        const H = window.innerHeight;
-        const aspect = W / Math.max(1, H);
-        // Camera is at (0, 0.04, 2.05) with fov scale 0.58 => 2.05 * 0.58 = 1.189
-        const vUvX = colliderX / (1.189 * aspect);
-        const vUvY = (colliderY - 0.04) / 1.189;
-        const cxPx = (0.5 + 0.5 * vUvX) * W;
-        const cyPx = (0.5 - 0.5 * vUvY) * H;
+        // Project the 3D Vorticity Ball through the shared camera for the Vector Arrow Overlay
+        const center = projectToScreen(colliderX, colliderY);
         // Effective coalesced smin radius of the 9 overlapping spheres at (colliderX, colliderY, 0)
         const eff3DRadius = colliderR * 1.18;
-        const radiusPx = (eff3DRadius / 1.189) * (H * 0.5);
+        const radiusPx = worldToPx(eff3DRadius);
 
-        renderVorticityOverlay(wVort, cxPx, cyPx, radiusPx, now);
+        renderVorticityOverlay(wVort, center.x, center.y, radiusPx, now);
 
         requestAnimationFrame(animate);
       }
