@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Simulation — Fermi</title>
+  <meta name="description" content="Interactive 2D vorticity simulator: place any object in a flow and measure drag, lift and vortex shedding." />
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #0a0b0e;
+      --panel-2: #101217;
+      --line: rgba(255, 255, 255, 0.10);
+      --line-strong: rgba(255, 255, 255, 0.24);
+      --text: #F5F7FA;
+      --muted: rgba(245, 247, 250, 0.60);
+      --faint: rgba(245, 247, 250, 0.38);
+      --accent: #FF5526;
+      --teal: #10EBAF;
+      --blue: #40AAFF;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --gutter: 28px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; min-height: 100svh; line-height: 1.5; overflow-x: hidden; }
+    button, input { font: inherit; color: inherit; }
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .wrap {
+      max-width: 1240px; margin: 0 auto;
+      padding-left: calc(var(--gutter) + var(--safe-left));
+      padding-right: calc(var(--gutter) + var(--safe-right));
+    }
+
+    /* ---------- Header (matches homepage) ---------- */
+    header { padding-top: var(--safe-top); }
+    .nav { display: flex; align-items: center; gap: 28px; height: 68px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .brand img { width: 26px; height: 26px; display: block; opacity: 0.92; }
+    .brand:hover img { opacity: 1; }
+    .brand span, .tab { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+    .tab { color: rgba(255,255,255,0.5); text-decoration: none; padding: 6px 0; border-bottom: 1px solid transparent; transition: color 0.2s; }
+    .tab:hover { color: #fff; }
+    .tab[aria-current="page"] { color: #fff; border-bottom-color: var(--accent); }
+
+    /* ---------- Intro ---------- */
+    .intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; padding: 12px 0 20px; }
+    h1 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 600; letter-spacing: -0.02em; }
+    .intro p { color: var(--muted); font-size: 14px; max-width: 62ch; margin-top: 6px; }
+    .intro .eq { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.06em; }
+
+    /* ---------- Stage ---------- */
+    .stage {
+      position: relative; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #05060a;
+    }
+    #sim { display: block; width: 100%; height: auto; touch-action: none; cursor: crosshair; }
+    .stage-hud {
+      position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      pointer-events: none; font-family: var(--mono); font-size: 10.5px; color: rgba(255,255,255,0.55); letter-spacing: 0.06em;
+    }
+    .scale { display: flex; align-items: center; gap: 8px; }
+    .scale i { display: block; width: 90px; height: 6px; border-radius: 3px; }
+    .flow-arrow { position: absolute; left: 12px; top: 10px; font-family: var(--mono); font-size: 10.5px; color: rgba(255,255,255,0.45); letter-spacing: 0.1em; pointer-events: none; }
+    .toast {
+      position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(10,11,14,0.85); border: 1px solid var(--line-strong);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--text); opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ---------- Panels ---------- */
+    .panels { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 14px; margin: 14px 0 40px; padding-bottom: var(--safe-bottom); }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .panel h2 { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; align-items: center; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field-label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
+    .field-label b { font-family: var(--mono); font-weight: 500; color: var(--text); font-size: 12px; }
+    .hint { font-size: 11.5px; color: var(--faint); }
+
+    .shapes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .shape-btn {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px 6px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10.5px; color: var(--muted); transition: all 0.15s;
+    }
+    .shape-btn svg { width: 26px; height: 18px; }
+    .shape-btn:hover { border-color: var(--line-strong); color: var(--text); }
+    .shape-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: rgba(255,85,38,0.10); }
+
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+    .seg button { background: transparent; border: 0; border-radius: 7px; padding: 7px 6px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .seg button:hover { color: var(--text); }
+    .seg button[aria-pressed="true"] { background: var(--text); color: #050507; font-weight: 600; }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 0; background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12px;
+      color: var(--text); cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--line-strong); background: rgba(255,255,255,0.08); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .btn.primary:hover { background: #ff663d; }
+
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.16); }
+    input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.16); }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); margin-top: -5.5px; border: 0; box-shadow: 0 0 0 4px rgba(255,255,255,0.08); }
+    input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 0; }
+    input[type="range"]:focus-visible { outline: none; }
+    input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(255,85,38,0.5); }
+    .toggle { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+    .toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+    button:focus-visible, .toggle input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ---------- Evaluation ---------- */
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .metric { background: var(--panel-2); padding: 11px 12px; min-width: 0; }
+    .metric dt { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--faint); text-transform: uppercase; white-space: nowrap; }
+    .metric dd { font-family: var(--mono); font-size: 18px; font-weight: 500; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .metric dd small { font-size: 11px; color: var(--faint); font-weight: 400; }
+    .regime { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; }
+    .regime-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--faint); }
+    .regime b { display: block; font-weight: 600; }
+    .regime span { color: var(--muted); font-size: 12.5px; }
+    .chart-wrap { position: relative; }
+    #chart { display: block; width: 100%; height: 96px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+    .chart-legend { display: flex; gap: 14px; font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin-top: 6px; }
+    .chart-legend i { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 6px; }
+    .progress { height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s linear; }
+
+    @media (max-width: 1000px) {
+      .panels { grid-template-columns: 1fr 1fr; }
+      .panel.eval { grid-column: 1 / -1; grid-row: 1; }
+    }
+    @media (max-width: 600px) {
+      :root { --gutter: 16px; }
+      .nav { height: 58px; gap: 20px; }
+      .intro { padding: 4px 0 14px; }
+      .intro p { font-size: 13px; }
+      .stage { border-radius: 12px; }
+      .panels { grid-template-columns: 1fr; }
+      .panel.eval { grid-row: auto; }
+      .metric dd { font-size: 16px; }
+      .stage-hud .scale i { width: 60px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="./" aria-label="Fermi home">
+        <img src="assets/logo.svg" alt="" width="26" height="26" />
+        <span>Fermi</span>
+      </a>
+      <a class="tab" href="simulation.html" aria-current="page">Simulation</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="intro">
+      <div>
+        <h1>Vorticity simulator</h1>
+        <p>Place an object in the flow and watch its wake develop. Fermi measures drag, lift and vortex-shedding frequency once the flow settles.</p>
+      </div>
+      <div class="eq">2D lattice-Boltzmann (D2Q9) · ω = ∇×u · runs in your browser</div>
+    </div>
+
+    <div class="stage">
+      <canvas id="sim" aria-label="Fluid simulation. Click or tap to place the selected object."></canvas>
+      <div class="flow-arrow">FLOW →</div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="stage-hud">
+        <span id="hud-mode">VORTICITY ω</span>
+        <span class="scale"><span id="scale-lo">−</span><i id="scale-bar"></i><span id="scale-hi">+</span></span>
+      </div>
+    </div>
+
+    <div class="panels">
+      <!-- OBJECT -->
+      <section class="panel" aria-labelledby="obj-h">
+        <h2 id="obj-h">Object</h2>
+        <div class="shapes" role="group" aria-label="Shape">
+          <button class="shape-btn" data-shape="circle" aria-pressed="true"><svg viewBox="0 0 26 18"><circle cx="13" cy="9" r="7" fill="currentColor"/></svg>Circle</button>
+          <button class="shape-btn" data-shape="square" aria-pressed="false"><svg viewBox="0 0 26 18"><rect x="6.5" y="2.5" width="13" height="13" fill="currentColor"/></svg>Square</button>
+          <button class="shape-btn" data-shape="airfoil" aria-pressed="false"><svg viewBox="0 0 26 18"><path d="M2 10C5 5 13 5.5 24 9.5C13 11.5 5 12.5 2 10Z" fill="currentColor"/></svg>Airfoil</button>
+          <button class="shape-btn" data-shape="plate" aria-pressed="false"><svg viewBox="0 0 26 18"><rect x="11.5" y="1.5" width="3" height="15" fill="currentColor"/></svg>Plate</button>
+          <button class="shape-btn" data-shape="wedge" aria-pressed="false"><svg viewBox="0 0 26 18"><path d="M5 9L21 2V16Z" fill="currentColor"/></svg>Wedge</button>
+        </div>
+        <div class="field">
+          <div class="field-label">Size <b id="size-v"></b></div>
+          <input type="range" id="size" min="8" max="40" step="1" value="20" aria-label="Object size, percent of channel height" />
+        </div>
+        <div class="field">
+          <div class="field-label">Angle <b id="angle-v"></b></div>
+          <input type="range" id="angle" min="-60" max="60" step="1" value="0" aria-label="Object angle in degrees" />
+        </div>
+        <div class="field">
+          <div class="field-label">Tool</div>
+          <div class="seg" role="group" aria-label="Tool">
+            <button data-tool="place" aria-pressed="true">Place</button>
+            <button data-tool="draw" aria-pressed="false">Draw</button>
+            <button data-tool="erase" aria-pressed="false">Erase</button>
+          </div>
+          <div class="hint" id="tool-hint">Click the flow to place the shape. Placing replaces the current objects.</div>
+        </div>
+        <div class="row">
+          <button class="btn" id="clear-btn">Clear objects</button>
+        </div>
+      </section>
+
+      <!-- FLOW -->
+      <section class="panel" aria-labelledby="flow-h">
+        <h2 id="flow-h">Flow</h2>
+        <div class="field">
+          <div class="field-label">Reynolds number <b id="re-v"></b></div>
+          <input type="range" id="re" min="20" max="300" step="5" value="150" aria-label="Target Reynolds number" />
+          <div class="hint" id="re-hint">Re = U·L/ν, with L the object's height across the flow.</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Inflow speed <b id="u-v"></b></div>
+          <input type="range" id="u" min="0.04" max="0.12" step="0.005" value="0.09" aria-label="Inflow speed in lattice units" />
+        </div>
+        <div class="field">
+          <div class="field-label">View</div>
+          <div class="seg" role="group" aria-label="Visualised field">
+            <button data-view="vorticity" aria-pressed="true">Vorticity</button>
+            <button data-view="speed" aria-pressed="false">Speed</button>
+            <button data-view="pressure" aria-pressed="false">Pressure</button>
+          </div>
+        </div>
+        <label class="toggle">Tracer particles <input type="checkbox" id="tracers" checked /></label>
+        <div class="row">
+          <button class="btn" id="pause-btn">Pause</button>
+          <button class="btn" id="reset-btn">Reset flow</button>
+        </div>
+      </section>
+
+      <!-- EVALUATION -->
+      <section class="panel eval" aria-labelledby="eval-h">
+        <h2 id="eval-h">Evaluation <span class="mono" id="steps" style="letter-spacing:0.06em"></span></h2>
+        <div class="progress" aria-hidden="true"><i id="settle-bar"></i></div>
+        <dl class="metrics">
+          <div class="metric"><dt>Reynolds</dt><dd id="m-re">—</dd></div>
+          <div class="metric"><dt>Drag C<sub>d</sub></dt><dd id="m-cd">—</dd></div>
+          <div class="metric"><dt>Lift C<sub>l</sub></dt><dd id="m-cl">—</dd></div>
+          <div class="metric"><dt>Strouhal</dt><dd id="m-st">—</dd></div>
+          <div class="metric"><dt>Lift swing</dt><dd id="m-clr">—</dd></div>
+          <div class="metric"><dt>Blockage</dt><dd id="m-blk">—</dd></div>
+        </dl>
+        <div class="regime">
+          <i class="regime-dot" id="regime-dot"></i>
+          <div><b id="regime-title">Settling</b><span id="regime-text">Waiting for the flow to develop.</span></div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart" aria-label="Drag and lift coefficient over time"></canvas>
+          <div class="chart-legend"><span><i style="background:#FF5526"></i>Drag C<sub>d</sub></span><span><i style="background:#10EBAF"></i>Lift C<sub>l</sub></span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ======================================================================
+    // GRID
+    // ======================================================================
+    const phoneMQ = window.matchMedia('(max-width: 600px), (pointer: coarse) and (max-height: 600px)');
+    const IS_PHONE = phoneMQ.matches;
+    const NY = IS_PHONE ? 96 : 150;
+    const NX = IS_PHONE ? 208 : 375;
+    const N = NX * NY;
+
+    // D2Q9 lattice: screen y points down
+    const EX = [0, 1, 0, -1, 0, 1, -1, -1, 1];
+    const EY = [0, 0, 1, 0, -1, 1, 1, -1, -1];
+    const W9 = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36];
+    const OPP = [0, 3, 4, 1, 2, 7, 8, 5, 6];
+    const OFF = EX.map((ex, i) => ex + EY[i] * NX);
+
+    let f = new Float32Array(9 * N);
+    let ft = new Float32Array(9 * N);
+    const rho = new Float32Array(N);
+    const ux = new Float32Array(N);
+    const uy = new Float32Array(N);
+    const solid = new Uint8Array(N);
+
+    // ======================================================================
+    // PARAMETERS & STATE
+    // ======================================================================
+    const state = {
+      U: 0.09,
+      reTarget: 150,
+      nu: 0.02,
+      tau: 0.56,
+      reEff: 150,
+      L: 1,
+      Lproj: 1,
+      byChord: false,
+      shape: 'circle',
+      sizePct: 20,
+      angle: 0,
+      tool: 'place',
+      view: 'vorticity',
+      tracers: true,
+      paused: false,
+      step: 0,
+    };
+    const TAU_MIN = 0.512; // BGK stability floor at this resolution
+
+    function eqInto(arr, idx, r, vx, vy) {
+      const u2 = 1.5 * (vx * vx + vy * vy);
+      for (let i = 0; i < 9; i++) {
+        const cu = 3 * (EX[i] * vx + EY[i] * vy);
+        arr[i * N + idx] = W9[i] * r * (1 + cu + 0.5 * cu * cu - u2);
+      }
+    }
+
+    function resetFlow() {
+      for (let y = 0; y < NY; y++) {
+        for (let x = 0; x < NX; x++) {
+          const idx = x + y * NX;
+          if (solid[idx]) {
+            eqInto(f, idx, 1, 0, 0);
+            ux[idx] = uy[idx] = 0;
+          } else {
+            // Tiny asymmetric kick so symmetric bodies start shedding promptly
+            const kick = 0.04 * state.U * Math.sin((x / NX) * Math.PI * 4) * Math.exp(-(((y - NY / 2) / (NY * 0.25)) ** 2));
+            eqInto(f, idx, 1, state.U, kick);
+            ux[idx] = state.U; uy[idx] = kick;
+          }
+          rho[idx] = 1;
+        }
+      }
+      state.step = 0;
+      resetStats();
+    }
+
+    // ======================================================================
+    // LBM STEP (BGK collide, pull-stream with bounce-back, momentum exchange)
+    // ======================================================================
+    let forceX = 0, forceY = 0;
+
+    function applyBoundaries(U) {
+      // Inlet (left) and far-field (top/bottom): free-stream equilibrium
+      for (let y = 0; y < NY; y++) eqInto(f, y * NX, 1, U, 0);
+      for (let x = 0; x < NX; x++) {
+        eqInto(f, x, 1, U, 0);
+        eqInto(f, (NY - 1) * NX + x, 1, U, 0);
+      }
+      // Outlet (right): zero-gradient
+      for (let y = 1; y < NY - 1; y++) {
+        const a = y * NX + NX - 1, b = a - 1;
+        for (let i = 0; i < 9; i++) f[i * N + a] = f[i * N + b];
+      }
+    }
+
+    // Edge cells: generic collide + push with bounds checks
+    function edgeCell(x, y, omega) {
+      const idx = x + y * NX;
+      let r = 0, mx = 0, my = 0;
+      for (let i = 0; i < 9; i++) { const v = f[i * N + idx]; r += v; mx += v * EX[i]; my += v * EY[i]; }
+      const vx = mx / r, vy = my / r, u2 = 1.5 * (vx * vx + vy * vy);
+      rho[idx] = r; ux[idx] = vx; uy[idx] = vy;
+      for (let i = 0; i < 9; i++) {
+        const cu = 3 * (EX[i] * vx + EY[i] * vy);
+        const g = f[i * N + idx] + omega * (W9[i] * r * (1 + cu + 0.5 * cu * cu - u2) - f[i * N + idx]);
+        const dx = x + EX[i], dy = y + EY[i];
+        if (dx < 0 || dx >= NX || dy < 0 || dy >= NY) continue;
+        const d = dx + dy * NX;
+        if (solid[d]) ft[OPP[i] * N + idx] = g;
+        else ft[i * N + d] = g;
+      }
+    }
+
+    // One fused BGK collide + push-stream pass with half-way bounce-back.
+    // Momentum exchange: a population g moving along c_i into a wall transfers 2·g·c_i to the body.
+    function lbmStep() {
+      const omega = 1 / state.tau;
+      applyBoundaries(state.U);
+
+      let fx = 0, fy = 0;
+      const N2 = 2 * N, N3 = 3 * N, N4 = 4 * N, N5 = 5 * N, N6 = 6 * N, N7 = 7 * N, N8 = 8 * N;
+      for (let y = 1; y < NY - 1; y++) {
+        const row = y * NX;
+        for (let x = 1; x < NX - 1; x++) {
+          const idx = row + x;
+          if (solid[idx]) continue;
+          const f0 = f[idx], f1 = f[N + idx], f2 = f[N2 + idx], f3 = f[N3 + idx], f4 = f[N4 + idx],
+                f5 = f[N5 + idx], f6 = f[N6 + idx], f7 = f[N7 + idx], f8 = f[N8 + idx];
+          const r = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
+          const ir = 1 / r;
+          const vx = (f1 - f3 + f5 - f6 - f7 + f8) * ir;
+          const vy = (f2 - f4 + f5 + f6 - f7 - f8) * ir;
+          rho[idx] = r; ux[idx] = vx; uy[idx] = vy;
+
+          const u2 = 1.5 * (vx * vx + vy * vy);
+          const r9 = r * (1 / 9), r36 = r * (1 / 36);
+          const a = 3 * vx, b = 3 * vy, p = a + b, q = b - a;
+          const g0 = f0 + omega * (r * (4 / 9) * (1 - u2) - f0);
+          const g1 = f1 + omega * (r9 * (1 + a + 0.5 * a * a - u2) - f1);
+          const g2 = f2 + omega * (r9 * (1 + b + 0.5 * b * b - u2) - f2);
+          const g3 = f3 + omega * (r9 * (1 - a + 0.5 * a * a - u2) - f3);
+          const g4 = f4 + omega * (r9 * (1 - b + 0.5 * b * b - u2) - f4);
+          const g5 = f5 + omega * (r36 * (1 + p + 0.5 * p * p - u2) - f5);
+          const g6 = f6 + omega * (r36 * (1 + q + 0.5 * q * q - u2) - f6);
+          const g7 = f7 + omega * (r36 * (1 - p + 0.5 * p * p - u2) - f7);
+          const g8 = f8 + omega * (r36 * (1 - q + 0.5 * q * q - u2) - f8);
+
+          ft[idx] = g0;
+          let d;
+          d = idx + 1;      if (solid[d]) { ft[N3 + idx] = g1; fx += 2 * g1; }              else ft[N + d] = g1;
+          d = idx + NX;     if (solid[d]) { ft[N4 + idx] = g2; fy += 2 * g2; }              else ft[N2 + d] = g2;
+          d = idx - 1;      if (solid[d]) { ft[N + idx] = g3;  fx -= 2 * g3; }              else ft[N3 + d] = g3;
+          d = idx - NX;     if (solid[d]) { ft[N2 + idx] = g4; fy -= 2 * g4; }              else ft[N4 + d] = g4;
+          d = idx + NX + 1; if (solid[d]) { ft[N7 + idx] = g5; fx += 2 * g5; fy += 2 * g5; } else ft[N5 + d] = g5;
+          d = idx + NX - 1; if (solid[d]) { ft[N8 + idx] = g6; fx -= 2 * g6; fy += 2 * g6; } else ft[N6 + d] = g6;
+          d = idx - NX - 1; if (solid[d]) { ft[N5 + idx] = g7; fx -= 2 * g7; fy -= 2 * g7; } else ft[N7 + d] = g7;
+          d = idx - NX + 1; if (solid[d]) { ft[N6 + idx] = g8; fx += 2 * g8; fy -= 2 * g8; } else ft[N8 + d] = g8;
+        }
+      }
+      for (let x = 0; x < NX; x++) { edgeCell(x, 0, omega); edgeCell(x, NY - 1, omega); }
+      for (let y = 1; y < NY - 1; y++) { edgeCell(0, y, omega); edgeCell(NX - 1, y, omega); }
+
+      const tmp = f; f = ft; ft = tmp;
+      forceX = fx; forceY = fy;
+      state.step++;
+    }
+
+    // ======================================================================
+    // OBJECTS
+    // ======================================================================
+    const DEFAULT_ANGLE = { circle: 0, square: 0, airfoil: 8, plate: 0, wedge: 0 };
+
+    // Polygon in grid cells, centred on (0,0), before rotation. size = cross-stream size in cells.
+    function shapePolygon(shape, size) {
+      const pts = [];
+      const s = size;
+      if (shape === 'circle') {
+        for (let k = 0; k < 64; k++) { const t = (k / 64) * Math.PI * 2; pts.push([Math.cos(t) * s / 2, Math.sin(t) * s / 2]); }
+      } else if (shape === 'square') {
+        pts.push([-s / 2, -s / 2], [s / 2, -s / 2], [s / 2, s / 2], [-s / 2, s / 2]);
+      } else if (shape === 'plate') {
+        const t = Math.max(2, s * 0.09);
+        pts.push([-t / 2, -s / 2], [t / 2, -s / 2], [t / 2, s / 2], [-t / 2, s / 2]);
+      } else if (shape === 'wedge') {
+        pts.push([-s * 0.55, 0], [s * 0.45, -s / 2], [s * 0.45, s / 2]);
+      } else if (shape === 'airfoil') {
+        // NACA 0012, chord = 2.4 × size so the default reads as a wing
+        const c = s * 2.4, th = 0.12, M = 40;
+        const yt = (xc) => 5 * th * c * (0.2969 * Math.sqrt(xc) - 0.126 * xc - 0.3516 * xc * xc + 0.2843 * xc ** 3 - 0.1036 * xc ** 4);
+        for (let k = 0; k <= M; k++) { const xc = (1 - Math.cos((k / M) * Math.PI)) / 2; pts.push([xc * c - c / 2, -yt(xc)]); }
+        for (let k = M - 1; k > 0; k--) { const xc = (1 - Math.cos((k / M) * Math.PI)) / 2; pts.push([xc * c - c / 2, yt(xc)]); }
+      }
+      return pts;
+    }
+
+    function placedPolygon(cx, cy) {
+      const size = (state.sizePct / 100) * NY;
+      // Positive angle = nose up (clockwise on a y-down screen)
+      const th = (state.angle * Math.PI) / 180, c = Math.cos(th), s = Math.sin(th);
+      return shapePolygon(state.shape, size).map(([x, y]) => [cx + x * c - y * s, cy + x * s + y * c]);
+    }
+
+    function insidePoly(px, py, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    }
+
+    const MARGIN = 3;
+    let placedPoly = null; // exact outline of the placed shape, for smooth drawing
+    function setSolid(idx, on) {
+      if (!!solid[idx] === on) return;
+      solid[idx] = on ? 1 : 0;
+      if (on) { ux[idx] = uy[idx] = 0; }
+      eqInto(f, idx, 1, on ? 0 : state.U * 0.5, 0);
+    }
+
+    function clearSolids() { for (let i = 0; i < N; i++) if (solid[i]) setSolid(i, false); }
+
+    function stampPolygon(poly) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const [x, y] of poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+      x0 = Math.max(MARGIN, Math.floor(x0)); x1 = Math.min(NX - 1 - MARGIN, Math.ceil(x1));
+      y0 = Math.max(MARGIN, Math.floor(y0)); y1 = Math.min(NY - 1 - MARGIN, Math.ceil(y1));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        if (insidePoly(x + 0.5, y + 0.5, poly)) setSolid(x + y * NX, true);
+      }
+    }
+
+    function brush(gx, gy, r, on) {
+      const r2 = r * r;
+      for (let y = Math.max(MARGIN, Math.floor(gy - r)); y <= Math.min(NY - 1 - MARGIN, Math.ceil(gy + r)); y++) {
+        for (let x = Math.max(MARGIN, Math.floor(gx - r)); x <= Math.min(NX - 1 - MARGIN, Math.ceil(gx + r)); x++) {
+          if ((x + 0.5 - gx) ** 2 + (y + 0.5 - gy) ** 2 <= r2) setSolid(x + y * NX, on);
+        }
+      }
+    }
+
+    function brushLine(ax, ay, bx, by, r, on) {
+      const d = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(d / (r * 0.5)));
+      for (let k = 0; k <= n; k++) brush(ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n, r, on);
+    }
+
+    // Cross-stream projected height of all objects (characteristic length L)
+    function measureObjects() {
+      let rows = 0, minX = NX;
+      for (let y = 0; y < NY; y++) {
+        let any = false;
+        for (let x = 0; x < NX; x++) if (solid[x + y * NX]) { any = true; if (x < minX) minX = x; }
+        if (any) rows++;
+      }
+      return { L: rows, hasObject: rows > 0, minX };
+    }
+
+    function updateViscosity() {
+      const m = measureObjects();
+      state.Lproj = Math.max(1, m.L);
+      // Airfoils are conventionally referenced to chord; bluff bodies to frontal height
+      state.byChord = !!placedPoly && state.shape === 'airfoil';
+      state.L = state.byChord ? Math.max(1, Math.round(((state.sizePct / 100) * NY) * 2.4)) : state.Lproj;
+      const nu = (state.U * state.L) / state.reTarget;
+      state.tau = Math.max(TAU_MIN, 3 * nu + 0.5);
+      state.nu = (state.tau - 0.5) / 3;
+      state.reEff = (state.U * state.L) / state.nu;
+      ui.reV.textContent = state.reTarget;
+      const clamped = state.reEff < state.reTarget - 1;
+      ui.reHint.textContent = clamped
+        ? `Capped at Re ${Math.round(state.reEff)} for this object size: the grid can't resolve thinner boundary layers. Use a smaller object to go higher.`
+        : (state.byChord ? 'Re = U·c/ν, with c the airfoil chord. Coefficients use chord too.' : 'Re = U·L/ν, with L the object’s height across the flow.');
+      ui.reHint.style.color = clamped ? 'var(--accent)' : '';
+      return m;
+    }
+
+    function sceneChanged() {
+      updateViscosity();
+      resetStats();
+    }
+
+    // ======================================================================
+    // EVALUATION (drag, lift, Strouhal)
+    // ======================================================================
+    const hist = []; // { t, cd, cl }
+    let statsFrom = 0;
+    let accFx = 0, accFy = 0, accN = 0;
+
+    function resetStats() {
+      hist.length = 0;
+      accFx = accFy = accN = 0;
+      // Let one full flow-through pass before measuring
+      statsFrom = state.step + Math.round(0.6 * NX / state.U);
+    }
+
+    function sampleForces() {
+      accFx += forceX; accFy += forceY; accN++;
+    }
+
+    function pushSample() {
+      if (!accN) return;
+      const q = 0.5 * state.U * state.U * state.L;
+      hist.push({ t: state.step, cd: accFx / accN / q, cl: -accFy / accN / q });
+      accFx = accFy = accN = 0;
+      const span = Math.round(Math.max(3.2 * NX, 12 * state.Lproj / 0.2) / state.U);
+      while (hist.length > 2 && hist[0].t < state.step - span) hist.shift();
+    }
+
+    function evaluate() {
+      const m = measureObjects();
+      const res = { hasObject: m.hasObject, ready: false, progress: 0 };
+      if (!m.hasObject) return res;
+      const settleLen = Math.round(0.6 * NX / state.U);
+      res.progress = Math.min(1, 1 - (statsFrom - state.step) / settleLen);
+      // Measure over the most recent stretch only, so start-up growth doesn't skew it
+      const cycle = state.Lproj / (0.2 * state.U); // typical shedding period (St ≈ 0.2)
+      const winStart = Math.max(statsFrom, state.step - Math.round(Math.max((1.2 * NX) / state.U, 5 * cycle)));
+      const win = hist.filter((h) => h.t >= winStart);
+      if (state.step < statsFrom || win.length < 20) return res;
+      res.ready = true;
+      res.span = state.step - winStart;
+
+      let cd = 0, cl = 0;
+      for (const h of win) { cd += h.cd; cl += h.cl; }
+      cd /= win.length; cl /= win.length;
+      let v = 0;
+      for (const h of win) v += (h.cl - cl) ** 2;
+      const clRms = Math.sqrt(v / win.length);
+
+      // Strouhal from upward zero-crossings of the lift signal (with hysteresis)
+      const thr = Math.max(clRms * 0.3, 1e-4);
+      const ups = [];
+      let armed = false;
+      for (let k = 1; k < win.length; k++) {
+        const a = win[k - 1].cl - cl, b = win[k].cl - cl;
+        if (b < -thr) armed = true;
+        if (armed && a < 0 && b >= 0) {
+          const tz = win[k - 1].t + ((win[k].t - win[k - 1].t) * -a) / (b - a || 1);
+          ups.push(tz); armed = false;
+        }
+      }
+      let st = null, regular = false;
+      if (ups.length >= 3) {
+        const periods = [];
+        for (let k = 1; k < ups.length; k++) periods.push(ups[k] - ups[k - 1]);
+        const pm = periods.reduce((s, p) => s + p, 0) / periods.length;
+        const sd = Math.sqrt(periods.reduce((s, p) => s + (p - pm) ** 2, 0) / periods.length);
+        st = (state.Lproj / pm) / state.U;
+        regular = sd / pm < 0.15;
+      }
+      Object.assign(res, { cd, cl, clRms, st, regular, L: state.L });
+      return res;
+    }
+
+    // ======================================================================
+    // RENDERING
+    // ======================================================================
+    const canvas = document.getElementById('sim');
+    const ctx = canvas.getContext('2d');
+    const field = document.createElement('canvas');
+    field.width = NX; field.height = NY;
+    const fctx = field.getContext('2d');
+    const img = fctx.createImageData(NX, NY);
+    const px = img.data;
+
+    const BASE = [6, 7, 11];
+    const POS = [255, 85, 38];   // counter-clockwise (orange)
+    const NEG = [64, 170, 255];  // clockwise (blue)
+    const SOLID = [214, 219, 228];
+    const SPEED_STOPS = [[6, 7, 11], [20, 40, 90], [40, 140, 220], [16, 235, 175], [245, 247, 250]];
+
+    function lerpStops(stops, t) {
+      t = Math.max(0, Math.min(0.9999, t)) * (stops.length - 1);
+      const k = Math.floor(t), u = t - k, a = stops[k], b = stops[k + 1];
+      return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u];
+    }
+
+    function setScale() {
+      const bar = document.getElementById('scale-bar');
+      const lo = document.getElementById('scale-lo'), hi = document.getElementById('scale-hi');
+      const mode = document.getElementById('hud-mode');
+      if (state.view === 'speed') {
+        bar.style.background = 'linear-gradient(90deg, rgb(6,7,11), rgb(20,40,90), rgb(40,140,220), rgb(16,235,175), rgb(245,247,250))';
+        lo.textContent = '0'; hi.textContent = '1.6U'; mode.textContent = 'SPEED |u|';
+      } else if (state.view === 'pressure') {
+        bar.style.background = 'linear-gradient(90deg, rgb(64,170,255), rgb(6,7,11), rgb(255,85,38))';
+        lo.textContent = 'low'; hi.textContent = 'high'; mode.textContent = 'PRESSURE Cp';
+      } else {
+        bar.style.background = 'linear-gradient(90deg, rgb(64,170,255), rgb(6,7,11), rgb(255,85,38))';
+        lo.textContent = 'CW'; hi.textContent = 'CCW'; mode.textContent = 'VORTICITY ω';
+      }
+    }
+
+    // Precomputed palettes (256 entries) so the per-pixel loop allocates nothing
+    function buildDiverging() {
+      const lut = new Uint8ClampedArray(256 * 3);
+      for (let k = 0; k < 256; k++) {
+        const t = (k / 255) * 2 - 1, m = Math.pow(Math.abs(t), 0.85), col = t >= 0 ? POS : NEG;
+        for (let c = 0; c < 3; c++) lut[k * 3 + c] = BASE[c] + (col[c] - BASE[c]) * m;
+      }
+      return lut;
+    }
+    function buildSpeed() {
+      const lut = new Uint8ClampedArray(256 * 3);
+      for (let k = 0; k < 256; k++) { const c = lerpStops(SPEED_STOPS, k / 255); lut[k * 3] = c[0]; lut[k * 3 + 1] = c[1]; lut[k * 3 + 2] = c[2]; }
+      return lut;
+    }
+    const LUT_DIV = buildDiverging(), LUT_SPEED = buildSpeed();
+
+    function renderField() {
+      const U = state.U, view = state.view;
+      const vg = 5 / U, pg = 0.9 / (3 * 0.5 * U * U), sg = 255 / (1.6 * U);
+      const lut = view === 'speed' ? LUT_SPEED : LUT_DIV;
+      for (let y = 0; y < NY; y++) {
+        for (let x = 0; x < NX; x++) {
+          const idx = x + y * NX, p = idx * 4;
+          if (solid[idx]) { px[p] = SOLID[0]; px[p + 1] = SOLID[1]; px[p + 2] = SOLID[2]; px[p + 3] = 255; continue; }
+          let k;
+          if (view === 'speed') {
+            k = Math.min(255, Math.sqrt(ux[idx] * ux[idx] + uy[idx] * uy[idx]) * sg) | 0;
+          } else {
+            let t;
+            if (view === 'pressure') {
+              t = Math.tanh((rho[idx] - 1) * pg);
+            } else {
+              const xl = x > 0 ? idx - 1 : idx, xr = x < NX - 1 ? idx + 1 : idx;
+              const yu = y > 0 ? idx - NX : idx, yd = y < NY - 1 ? idx + NX : idx;
+              // y-down grid: flip sign so positive = counter-clockwise on screen
+              const curl = -((uy[xr] - uy[xl]) - (ux[yd] - ux[yu])) * 0.5;
+              t = Math.tanh(curl * vg);
+            }
+            k = ((t + 1) * 127.5) | 0;
+          }
+          px[p] = lut[k * 3]; px[p + 1] = lut[k * 3 + 1]; px[p + 2] = lut[k * 3 + 2]; px[p + 3] = 255;
+        }
+      }
+      fctx.putImageData(img, 0, 0);
+    }
+
+    // Tracers
+    const NT = IS_PHONE ? 700 : 1800;
+    const tx = new Float32Array(NT), ty = new Float32Array(NT), tage = new Float32Array(NT);
+    function seedTracer(k, anywhere) {
+      tx[k] = anywhere ? 1 + Math.random() * (NX - 3) : 1 + Math.random() * 2;
+      ty[k] = 1 + Math.random() * (NY - 3);
+      tage[k] = 0;
+    }
+    for (let k = 0; k < NT; k++) seedTracer(k, true);
+
+    function sampleU(x, y) {
+      const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+      const i = x0 + y0 * NX;
+      const a = (1 - fx) * (1 - fy), b = fx * (1 - fy), c = (1 - fx) * fy, d = fx * fy;
+      return [ux[i] * a + ux[i + 1] * b + ux[i + NX] * c + ux[i + NX + 1] * d,
+              uy[i] * a + uy[i + 1] * b + uy[i + NX] * c + uy[i + NX + 1] * d];
+    }
+
+    function advectTracers(steps) {
+      for (let k = 0; k < NT; k++) {
+        const [vx, vy] = sampleU(tx[k], ty[k]);
+        tx[k] += vx * steps; ty[k] += vy * steps; tage[k] += steps;
+        const ix = tx[k] | 0, iy = ty[k] | 0;
+        if (tx[k] < 1 || tx[k] >= NX - 2 || ty[k] < 1 || ty[k] >= NY - 2 || solid[ix + iy * NX]) seedTracer(k, false);
+      }
+    }
+
+    let cssW = 0, cssH = 0, scale = 1;
+    function resize() {
+      const w = canvas.parentElement.clientWidth;
+      const dpr = IS_PHONE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+      cssW = w; cssH = Math.round((w * NY) / NX); scale = w / NX;
+      canvas.style.height = cssH + 'px';
+      canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    let hover = null; // grid coords of pointer
+    function draw() {
+      renderField();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(field, 0, 0, cssW, cssH);
+
+      if (placedPoly) {
+        ctx.fillStyle = 'rgb(214,219,228)';
+        ctx.beginPath();
+        placedPoly.forEach(([x, y], i) => (i ? ctx.lineTo(x * scale, y * scale) : ctx.moveTo(x * scale, y * scale)));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (state.tracers) {
+        // One path for all dots: far cheaper than one fillRect per tracer
+        ctx.fillStyle = 'rgba(245,247,250,0.55)';
+        const r = Math.max(0.8, scale * 0.28);
+        ctx.beginPath();
+        for (let k = 0; k < NT; k++) {
+          if (tage[k] < 8) continue;
+          ctx.rect(tx[k] * scale - r / 2, ty[k] * scale - r / 2, r, r);
+        }
+        ctx.fill();
+      }
+
+      if (hover) {
+        ctx.save();
+        ctx.lineWidth = 1.25;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = state.tool === 'erase' ? 'rgba(255,90,90,0.9)' : 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        if (state.tool === 'place') {
+          const poly = placedPolygon(hover[0], hover[1]);
+          poly.forEach(([x, y], i) => (i ? ctx.lineTo(x * scale, y * scale) : ctx.moveTo(x * scale, y * scale)));
+          ctx.closePath();
+        } else {
+          ctx.arc(hover[0] * scale, hover[1] * scale, brushRadius() * scale, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Chart
+    const chart = document.getElementById('chart');
+    const cctx = chart.getContext('2d');
+    function drawChart() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = chart.clientWidth, h = chart.clientHeight;
+      if (chart.width !== Math.round(w * dpr)) { chart.width = Math.round(w * dpr); chart.height = Math.round(h * dpr); }
+      cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cctx.clearRect(0, 0, w, h);
+      if (hist.length < 2) return;
+      let lo = Infinity, hi = -Infinity;
+      const from = Math.floor(hist.length * 0.3);
+      for (let i = from; i < hist.length; i++) { const s = hist[i]; lo = Math.min(lo, s.cd, s.cl); hi = Math.max(hi, s.cd, s.cl); }
+      lo = Math.min(lo, -0.2); hi = Math.max(hi, 0.2);
+      const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+      const t0 = hist[0].t, t1 = hist[hist.length - 1].t || t0 + 1;
+      const X = (t) => 8 + ((t - t0) / Math.max(1, t1 - t0)) * (w - 16);
+      const Y = (v) => h - 8 - ((v - lo) / (hi - lo)) * (h - 16);
+      // zero line
+      cctx.strokeStyle = 'rgba(255,255,255,0.12)'; cctx.lineWidth = 1; cctx.setLineDash([3, 4]);
+      cctx.beginPath(); cctx.moveTo(8, Y(0)); cctx.lineTo(w - 8, Y(0)); cctx.stroke(); cctx.setLineDash([]);
+      // settle marker
+      if (statsFrom > t0 && statsFrom < t1) {
+        cctx.fillStyle = 'rgba(255,255,255,0.04)';
+        cctx.fillRect(8, 4, X(statsFrom) - 8, h - 8);
+      }
+      cctx.save();
+      cctx.beginPath(); cctx.rect(0, 2, w, h - 4); cctx.clip();
+      for (const [key, col] of [['cd', '#FF5526'], ['cl', '#10EBAF']]) {
+        cctx.strokeStyle = col; cctx.lineWidth = 1.5; cctx.beginPath();
+        hist.forEach((s, i) => (i ? cctx.lineTo(X(s.t), Y(s[key])) : cctx.moveTo(X(s.t), Y(s[key]))));
+        cctx.stroke();
+      }
+      cctx.restore();
+    }
+
+    // ======================================================================
+    // UI
+    // ======================================================================
+    const $ = (id) => document.getElementById(id);
+    const ui = {
+      sizeV: $('size-v'), angleV: $('angle-v'), reV: $('re-v'), uV: $('u-v'), reHint: $('re-hint'),
+      mRe: $('m-re'), mCd: $('m-cd'), mCl: $('m-cl'), mSt: $('m-st'), mClr: $('m-clr'), mBlk: $('m-blk'),
+      regimeTitle: $('regime-title'), regimeText: $('regime-text'), regimeDot: $('regime-dot'),
+      settle: $('settle-bar'), steps: $('steps'), toast: $('toast'), pause: $('pause-btn'), toolHint: $('tool-hint'),
+    };
+
+    let toastTimer = 0;
+    function toast(msg) {
+      ui.toast.textContent = msg; ui.toast.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2600);
+    }
+
+    function pressGroup(selector, el) {
+      document.querySelectorAll(selector).forEach((b) => b.setAttribute('aria-pressed', b === el ? 'true' : 'false'));
+    }
+
+    const TOOL_HINTS = {
+      place: 'Click the flow to place the shape. Placing replaces the current objects.',
+      draw: 'Drag on the flow to draw any solid shape. Adds to what’s there.',
+      erase: 'Drag over objects to erase them.',
+    };
+
+    document.querySelectorAll('.shape-btn').forEach((b) => b.addEventListener('click', () => {
+      pressGroup('.shape-btn', b);
+      state.shape = b.dataset.shape;
+      state.angle = DEFAULT_ANGLE[state.shape];
+      $('angle').value = state.angle;
+      syncLabels();
+      if (state.tool !== 'place') { state.tool = 'place'; pressGroup('[data-tool]', document.querySelector('[data-tool="place"]')); ui.toolHint.textContent = TOOL_HINTS.place; }
+      placeDefault();
+    }));
+    document.querySelectorAll('[data-tool]').forEach((b) => b.addEventListener('click', () => {
+      pressGroup('[data-tool]', b); state.tool = b.dataset.tool; ui.toolHint.textContent = TOOL_HINTS[state.tool];
+    }));
+    document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+      pressGroup('[data-view]', b); state.view = b.dataset.view; setScale();
+    }));
+
+    // Size/angle re-place the object at the same spot while in place mode
+    let lastPlace = null;
+    function placeAt(gx, gy) {
+      clearSolids();
+      placedPoly = placedPolygon(gx, gy);
+      stampPolygon(placedPoly);
+      lastPlace = [gx, gy];
+      sceneChanged();
+    }
+    function placeDefault() {
+      placeAt(lastPlace ? lastPlace[0] : NX * 0.24, lastPlace ? lastPlace[1] : NY / 2 + 0.5);
+    }
+
+    $('size').addEventListener('input', (e) => { state.sizePct = +e.target.value; syncLabels(); if (lastPlace) placeDefault(); });
+    $('angle').addEventListener('input', (e) => { state.angle = +e.target.value; syncLabels(); if (lastPlace) placeDefault(); });
+    $('re').addEventListener('input', (e) => { state.reTarget = +e.target.value; sceneChanged(); });
+    $('u').addEventListener('input', (e) => { state.U = +e.target.value; syncLabels(); sceneChanged(); });
+    $('tracers').addEventListener('change', (e) => { state.tracers = e.target.checked; });
+    $('clear-btn').addEventListener('click', () => { clearSolids(); lastPlace = null; placedPoly = null; sceneChanged(); });
+    $('reset-btn').addEventListener('click', () => { resetFlow(); for (let k = 0; k < NT; k++) seedTracer(k, true); });
+    ui.pause.addEventListener('click', () => {
+      state.paused = !state.paused; ui.pause.textContent = state.paused ? 'Resume' : 'Pause';
+      ui.pause.classList.toggle('primary', state.paused);
+    });
+
+    function syncLabels() {
+      ui.sizeV.textContent = state.sizePct + '% of height';
+      ui.angleV.textContent = (state.angle > 0 ? '+' : '') + state.angle + '°';
+      ui.uV.textContent = state.U.toFixed(3);
+    }
+
+    function brushRadius() { return state.tool === 'erase' ? Math.max(4, NY * 0.05) : Math.max(2, NY * 0.022); }
+
+    function toGrid(e) {
+      const r = canvas.getBoundingClientRect();
+      return [((e.clientX - r.left) / r.width) * NX, ((e.clientY - r.top) / r.height) * NY];
+    }
+    let drawing = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      const g = toGrid(e);
+      hover = g;
+      if (state.tool === 'place') { placeAt(g[0], g[1]); return; }
+      canvas.setPointerCapture(e.pointerId);
+      drawing = g;
+      brush(g[0], g[1], brushRadius(), state.tool === 'draw');
+      lastPlace = null; placedPoly = null;
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const g = toGrid(e);
+      hover = e.pointerType === 'touch' && !drawing ? null : g;
+      if (drawing) { brushLine(drawing[0], drawing[1], g[0], g[1], brushRadius(), state.tool === 'draw'); drawing = g; }
+    });
+    const endDraw = () => { if (drawing) { drawing = null; sceneChanged(); } };
+    canvas.addEventListener('pointerup', (e) => { endDraw(); if (e.pointerType === 'touch') hover = null; });
+    canvas.addEventListener('pointercancel', () => { endDraw(); hover = null; });
+    canvas.addEventListener('pointerleave', () => { if (!drawing) hover = null; });
+
+    function fmt(v, d) { return v === null || v === undefined || !isFinite(v) ? '—' : (v >= 0 ? '' : '−') + Math.abs(v).toFixed(d); }
+
+    function setRegime(color, title, text) {
+      ui.regimeDot.style.background = color;
+      ui.regimeDot.style.boxShadow = color === 'var(--faint)' ? 'none' : `0 0 10px ${color}`;
+      ui.regimeTitle.textContent = title; ui.regimeText.textContent = text;
+    }
+
+    function updateEvaluation() {
+      const r = evaluate();
+      ui.mRe.textContent = r.hasObject ? Math.round(state.reEff) : '—';
+      ui.mBlk.innerHTML = r.hasObject ? Math.round((state.Lproj / NY) * 100) + '<small>%</small>' : '—';
+      ui.steps.textContent = 't = ' + state.step.toLocaleString();
+      ui.settle.style.width = (r.hasObject ? r.progress * 100 : 0) + '%';
+      if (!r.hasObject) {
+        ui.mCd.textContent = ui.mCl.textContent = ui.mSt.textContent = ui.mClr.textContent = '—';
+        setRegime('var(--faint)', 'No object', 'Pick a shape and click the flow, or draw your own.');
+        return;
+      }
+      if (!r.ready) {
+        ui.mCd.textContent = ui.mCl.textContent = ui.mSt.textContent = ui.mClr.textContent = '…';
+        setRegime('var(--faint)', 'Settling ' + Math.round(r.progress * 100) + '%', 'Letting the wake develop before measuring.');
+        return;
+      }
+      ui.mCd.textContent = fmt(r.cd, 2);
+      ui.mCl.textContent = fmt(r.cl, 2);
+      ui.mClr.textContent = '±' + (r.clRms * Math.SQRT2).toFixed(2);
+      const blockNote = state.Lproj / NY > 0.3 ? ' Blockage is high, so the channel walls inflate drag.' : '';
+      if (r.clRms < 0.015 || (!r.st && r.clRms < 0.05)) {
+        ui.mSt.textContent = '—';
+        setRegime('var(--blue)', 'Steady wake', 'A pair of attached vortices sits behind the body; no shedding at this Reynolds number.' + blockNote);
+      } else if (r.st && r.regular) {
+        ui.mSt.textContent = r.st.toFixed(3);
+        setRegime('var(--teal)', 'Periodic vortex shedding', `A Kármán vortex street: vortices of alternating sign leave every ${(state.Lproj / (r.st * state.U)).toFixed(0)} steps.` + blockNote);
+      } else if (!r.st || (!r.regular && r.span < (3.5 * state.Lproj) / (0.2 * state.U))) {
+        // Oscillating, but not enough cycles in the window yet to time them
+        ui.mSt.textContent = r.st ? '≈' + r.st.toFixed(2) : '…';
+        setRegime('var(--teal)', 'Shedding is starting', 'The lift is oscillating; timing a few more cycles to measure the frequency.' + blockNote);
+      } else {
+        ui.mSt.textContent = '≈' + r.st.toFixed(2);
+        setRegime('var(--accent)', 'Irregular wake', 'Shedding is present but not periodic; the wake is breaking up.' + blockNote);
+      }
+    }
+
+    // ======================================================================
+    // LOOP
+    // ======================================================================
+    let stepsPerFrame = 6, lastEval = 0;
+    function frame(now) {
+      if (!state.paused) {
+        const t0 = performance.now();
+        for (let s = 0; s < stepsPerFrame; s++) { lbmStep(); sampleForces(); }
+        const dt = performance.now() - t0;
+        // Adapt to ~11 ms of solver time per frame
+        const per = dt / stepsPerFrame;
+        stepsPerFrame = Math.max(1, Math.min(30, Math.round(11 / Math.max(0.05, per))));
+        pushSample();
+        if (state.tracers) advectTracers(stepsPerFrame);
+
+        // Stability guard
+        const probe = rho[(NY >> 1) * NX + (NX >> 1)] + rho[(NY >> 2) * NX + ((NX * 3) >> 2)];
+        if (!isFinite(probe) || probe > 3 || probe < 1) {
+          state.reTarget = Math.max(20, Math.round(state.reTarget * 0.7 / 5) * 5);
+          $('re').value = state.reTarget;
+          updateViscosity();
+          resetFlow();
+          toast('Flow went unstable, so Re was lowered to ' + state.reTarget);
+        }
+      }
+      draw();
+      if (now - lastEval > 200) { updateEvaluation(); drawChart(); lastEval = now; }
+      requestAnimationFrame(frame);
+    }
+
+    // Init
+    syncLabels();
+    setScale();
+    ui.reV.textContent = state.reTarget;
+    placeAt(NX * 0.24, NY / 2 + 0.5);
+    resetFlow();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

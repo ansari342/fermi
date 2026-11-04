@@ -57,6 +57,37 @@
       pointer-events: none;
     }
 
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    header a {
+      pointer-events: auto;
+    }
+    #brand-link span {
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .nav-tab {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .nav-tab:hover {
+      color: #FFFFFF;
+      border-bottom-color: #FF5526;
+    }
+    @media (max-width: 600px) {
+      .nav-left { gap: 20px; }
+    }
+
     #brand-link {
       display: flex;
       align-items: center;
@@ -233,10 +264,13 @@
 
   <!-- MINIMAL FLOATING TOP BAR: FERMI BRAND MARK -->
   <header class="fixed top-0 inset-x-0 z-50 flex items-center justify-between pointer-events-none">
-    <a href="#sec-0" id="brand-link" class="pointer-events-auto flex items-center gap-2.5 group">
-      <img src="assets/logo.svg" alt="" width="26" height="26" class="brand-logo" />
-      <span class="font-mono text-xs font-semibold tracking-[0.22em] uppercase text-white/90 group-hover:text-white transition-colors">Fermi</span>
-    </a>
+    <nav class="nav-left" aria-label="Primary">
+      <a href="#sec-0" id="brand-link" class="pointer-events-auto flex items-center gap-2.5 group">
+        <img src="assets/logo.svg" alt="" width="26" height="26" class="brand-logo" />
+        <span class="font-mono text-xs font-semibold tracking-[0.22em] uppercase text-white/90 group-hover:text-white transition-colors">Fermi</span>
+      </a>
+      <a href="simulation.html" class="nav-tab">Simulation</a>
+    </nav>
   </header>
 
   <!-- STICKY LOWER-CENTER SEE-THROUGH SPECULAR GHOST CAPSULE CTA (MOCK 2, NO BADGE) -->
