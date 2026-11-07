@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Tests — Fermi</title>
+  <meta name="description" content="Before and after Fermi physics evals: gravity, conservation of momentum and friction." />
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #0a0b0e;
+      --panel-2: #101217;
+      --line: rgba(255, 255, 255, 0.10);
+      --line-strong: rgba(255, 255, 255, 0.24);
+      --text: #F5F7FA;
+      --muted: rgba(245, 247, 250, 0.60);
+      --faint: rgba(245, 247, 250, 0.38);
+      --accent: #FF5526;
+      --teal: #10EBAF;
+      --red: #FF3E5F;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --gutter: 28px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; min-height: 100svh; line-height: 1.5; overflow-x: hidden; }
+
+    .wrap {
+      max-width: 1240px; margin: 0 auto;
+      padding-left: calc(var(--gutter) + var(--safe-left));
+      padding-right: calc(var(--gutter) + var(--safe-right));
+    }
+
+    /* Header (matches homepage + simulation) */
+    header { padding-top: var(--safe-top); }
+    .nav { display: flex; align-items: center; gap: 28px; height: 68px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .brand img { width: 26px; height: 26px; display: block; opacity: 0.92; }
+    .brand:hover img { opacity: 1; }
+    .brand span, .tab { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+    .tab { color: rgba(255,255,255,0.5); text-decoration: none; padding: 6px 0; border-bottom: 1px solid transparent; transition: color 0.2s; }
+    .tab:hover { color: #fff; }
+    .tab[aria-current="page"] { color: #fff; border-bottom-color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    /* Intro */
+    .intro { padding: 12px 0 8px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    h1 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 600; letter-spacing: -0.02em; }
+    .intro p { color: var(--muted); font-size: 14px; max-width: 64ch; margin-top: 6px; }
+    .summary { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sum {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 12px; color: var(--muted); background: var(--panel); white-space: nowrap;
+    }
+    .sum b { font-weight: 600; }
+    .sum .bad { color: var(--red); }
+    .sum .good { color: var(--teal); }
+    .note { font-size: 12px; color: var(--faint); margin-top: 14px; max-width: 80ch; }
+
+    /* Test sections */
+    .test { padding: 36px 0 8px; }
+    .test + .test { border-top: 1px solid var(--line); margin-top: 28px; }
+    .test-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 32px; flex-wrap: wrap; margin-bottom: 18px; }
+    .test-num { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--faint); display: block; margin-bottom: 6px; }
+    .test-head h2 { font-size: clamp(20px, 2.4vw, 26px); font-weight: 600; letter-spacing: -0.015em; }
+    .law { font-family: var(--mono); font-size: 13px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; margin-left: 10px; vertical-align: 3px; font-weight: 500; white-space: nowrap; }
+    .test-head p { color: var(--muted); font-size: 13.5px; max-width: 58ch; }
+
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    figure { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+    figure.after { border-color: rgba(255, 85, 38, 0.35); }
+    figure img { display: block; width: 100%; height: auto; aspect-ratio: 560 / 350; background: #05060a; }
+    figcaption { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .cap-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .stage-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+    figure.after .stage-label { color: var(--accent); }
+    .verdict { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+    .verdict.fail { background: rgba(255, 62, 95, 0.14); color: var(--red); }
+    .verdict.pass { background: rgba(16, 235, 175, 0.12); color: var(--teal); }
+    .checks { list-style: none; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+    .checks li { position: relative; padding-left: 22px; }
+    .checks li::before { position: absolute; left: 0; top: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; }
+    .checks li.x::before { content: "✗"; color: var(--red); }
+    .checks li.ok::before { content: "✓"; color: var(--teal); }
+    .checks b { color: var(--text); font-weight: 500; font-family: var(--mono); font-size: 12px; }
+
+    footer { padding: 40px 0 calc(40px + var(--safe-bottom)); color: var(--faint); font-size: 12px; font-family: var(--mono); }
+
+    @media (max-width: 760px) {
+      .pair { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      :root { --gutter: 16px; }
+      .nav { height: 58px; gap: 20px; }
+      .intro p { font-size: 13px; }
+      .law { display: inline-block; margin: 8px 0 0; }
+      figure { border-radius: 12px; }
+      .test { padding-top: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="./" aria-label="Fermi home">
+        <img src="assets/logo.svg" alt="" width="26" height="26" />
+        <span>Fermi</span>
+      </a>
+      <a class="tab" href="simulation.html">Simulation</a>
+      <a class="tab" href="tests.html" aria-current="page">Tests</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="intro">
+      <div>
+        <h1>Physics tests</h1>
+        <p>Each test runs a clip through a Fermi physics eval. On the left, raw output and the violations the eval flags. On the right, the same scene once the evals are applied.</p>
+      </div>
+      <div class="summary" aria-label="Results summary">
+        <span class="sum">Before <b class="bad">0 / 3 pass</b></span>
+        <span class="sum">After <b class="good">3 / 3 pass</b></span>
+      </div>
+    </div>
+    <p class="note">Illustrative renders. The “before” clips reproduce common failure modes of video-generation models; the “after” clips follow the exact physical solution. Each frame shows the quantity the eval measures.</p>
+
+    <!-- GRAVITY -->
+    <section class="test" aria-labelledby="t1">
+      <div class="test-head">
+        <div>
+          <span class="test-num">01</span>
+          <h2 id="t1">Gravity <span class="law">a<sub>y</sub> = −g</span></h2>
+        </div>
+        <p>Fits a parabola to the airborne segments of every trajectory and checks the recovered acceleration against g = 9.81 m/s², and that no bounce adds energy.</p>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="assets/tests/gravity-before.gif" width="560" height="350" loading="lazy" alt="Before: a ball rises at constant speed, hovers mid-air, falls at constant speed, then bounces higher than it fell." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">Before · raw output</span><span class="verdict fail">✗ FAIL</span></div>
+            <ul class="checks">
+              <li class="x">Fitted g is <b>0.0 m/s²</b> while airborne: the ball hovers</li>
+              <li class="x">Bounce <b>gains 25%</b> energy</li>
+            </ul>
+          </figcaption>
+        </figure>
+        <figure class="after">
+          <img src="assets/tests/gravity-after.gif" width="560" height="350" loading="lazy" alt="After: the ball follows a parabola and each bounce is lower than the last." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">After · Fermi evals</span><span class="verdict pass">✓ PASS</span></div>
+            <ul class="checks">
+              <li class="ok">Fitted g is <b>9.81 m/s²</b>: parabolic flight</li>
+              <li class="ok">Each bounce <b>loses 51%</b> energy (restitution 0.70)</li>
+            </ul>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- MOMENTUM -->
+    <section class="test" aria-labelledby="t2">
+      <div class="test-head">
+        <div>
+          <span class="test-num">02</span>
+          <h2 id="t2">Conservation of momentum <span class="law">Σp = const</span></h2>
+        </div>
+        <p>Tracks each body’s mass and velocity through a collision and checks that total momentum is unchanged and that the bodies never pass into each other.</p>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="assets/tests/momentum-before.gif" width="560" height="350" loading="lazy" alt="Before: a 1 kg ball sinks into a 3 kg ball, stops dead, and the heavy ball shoots off faster than momentum allows." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">Before · raw output</span><span class="verdict fail">✗ FAIL</span></div>
+            <ul class="checks">
+              <li class="x">Total momentum jumps <b>2.80 → 5.70 kg·m/s</b> (+104%)</li>
+              <li class="x">Bodies <b>overlap 0.15 m</b> at contact</li>
+            </ul>
+          </figcaption>
+        </figure>
+        <figure class="after">
+          <img src="assets/tests/momentum-after.gif" width="560" height="350" loading="lazy" alt="After: the light ball rebounds and the heavy ball moves off, with total momentum unchanged." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">After · Fermi evals</span><span class="verdict pass">✓ PASS</span></div>
+            <ul class="checks">
+              <li class="ok">Total momentum stays <b>2.80 kg·m/s</b> (Δ 0.0%)</li>
+              <li class="ok">Clean contact; the light ball <b>rebounds at −1.40 m/s</b></li>
+            </ul>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- FRICTION -->
+    <section class="test" aria-labelledby="t3">
+      <div class="test-head">
+        <div>
+          <span class="test-num">03</span>
+          <h2 id="t3">Friction <span class="law">|a| = μg</span></h2>
+        </div>
+        <p>Measures how a sliding object slows down: deceleration must be constant at μg, the object must stop, and it must never speed up without a force.</p>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="assets/tests/friction-before.gif" width="560" height="350" loading="lazy" alt="Before: a sliding block slows too little, then speeds up again on its own and leaves the frame." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">Before · raw output</span><span class="verdict fail">✗ FAIL</span></div>
+            <ul class="checks">
+              <li class="x">Block <b>speeds up</b> with no force acting</li>
+              <li class="x">Effective friction goes <b>negative</b> (μ 0.22 → −0.08)</li>
+            </ul>
+          </figcaption>
+        </figure>
+        <figure class="after">
+          <img src="assets/tests/friction-after.gif" width="560" height="350" loading="lazy" alt="After: the block decelerates steadily and stops after 2 metres." />
+          <figcaption>
+            <div class="cap-top"><span class="stage-label">After · Fermi evals</span><span class="verdict pass">✓ PASS</span></div>
+            <ul class="checks">
+              <li class="ok">Constant deceleration <b>4.41 m/s² = μg</b> (μ 0.45)</li>
+              <li class="ok">Stops after <b>2.00 m</b>, matching v₀² / 2μg</li>
+            </ul>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">© Fermi</div>
+  </footer>
+</body>
+</html>
